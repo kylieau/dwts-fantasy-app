@@ -50,11 +50,11 @@ Each milestone should be independently testable before moving to the next.
 - [x] **Verify:** two test accounts can create a league, join via code, and see each other in the member list
 
 ### Phase 3 — Commissioner Settings
-- [ ] Build league settings form (roster size, waiver mode, waiver claim method, draft timer)
-- [ ] Build scoring settings form (judges multiplier, survival points, prediction points, podium bonuses)
-- [ ] Restrict the settings screen to the commissioner role
-- [ ] Write RLS policies: only the commissioner can write `leagues`/`scoring_settings` for their league
-- [ ] **Verify:** a non-commissioner manager can't access or edit settings; commissioner's changes persist and display correctly
+- [x] Build league settings form (roster size, waiver mode, waiver claim method, draft timer)
+- [x] Build scoring settings form (judges multiplier, survival points, prediction points, podium bonuses)
+- [x] Restrict the settings screen to the commissioner role
+- [x] Write RLS policies: only the commissioner can write `leagues`/`scoring_settings` for their league — via `update_league_settings`/`update_scoring_settings` SECURITY DEFINER functions rather than direct table grants (no UPDATE grant exists on either table at all)
+- [x] **Verify:** a non-commissioner manager can't access or edit settings; commissioner's changes persist and display correctly
 
 ### Phase 4 — Live Snake Draft
 - [ ] Seed the `couples` table for the active season
@@ -93,5 +93,5 @@ Each milestone should be independently testable before moving to the next.
 - [ ] Apply dark mode + gold accent (`#D4AF37`) theme across all screens
 - [ ] Full mobile responsiveness pass on all four core screens
 - [ ] Security review: confirm RLS policies cover every table and write path
-- [ ] Deploy to Vercel and connect the production Supabase project
+- [x] Deploy to Vercel and connect the production Supabase project — done early (after Phase 2) so the app was reachable outside the dev container; production is the same Supabase project used throughout development, not yet split into separate dev/prod projects
 - [ ] **Verify:** full user journey (sign up → create league → draft → submit prediction → view results) works end-to-end in production

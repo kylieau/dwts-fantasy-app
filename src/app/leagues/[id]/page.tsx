@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,10 +12,13 @@ import {
 
 export default async function LeaguePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
+  const { error } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -26,7 +31,7 @@ export default async function LeaguePage({
 
   const { data: league } = await supabase
     .from("leagues")
-    .select("id, name, invite_code")
+    .select("id, name, invite_code, commissioner_id")
     .eq("id", id)
     .single();
 
@@ -42,14 +47,22 @@ export default async function LeaguePage({
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-12">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{league.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Invite code:{" "}
-          <span className="font-mono font-medium text-foreground">
-            {league.invite_code}
-          </span>
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{league.name}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Invite code:{" "}
+            <span className="font-mono font-medium text-foreground">
+              {league.invite_code}
+            </span>
+          </p>
+          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+        </div>
+        {league.commissioner_id === user.id && (
+          <Button render={<Link href={`/leagues/${id}/settings`} />} variant="outline" size="sm">
+            Settings
+          </Button>
+        )}
       </div>
 
       <Card>

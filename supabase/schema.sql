@@ -366,3 +366,93 @@ using (
     where lm1.user_id = auth.uid() and lm2.user_id = profiles.id
   )
 );
+
+-- ============================================================
+-- Commissioner settings: same SECURITY DEFINER write pattern as
+-- create_league/join_league, so the commissioner check lives in one place
+-- (the function) instead of relying on RLS column-level tricks or the client
+-- honestly only sending the fields the UI shows.
+-- ============================================================
+
+grant select on public.scoring_settings to authenticated;
+
+create policy "scoring settings are viewable by league members"
+on public.scoring_settings for select
+using (public.is_league_member(league_id));
+
+create function public.update_league_settings(
+  p_league_id uuid,
+  p_roster_size int,
+  p_waiver_mode text,
+  p_waiver_claim_method text,
+  p_pick_time_limit_seconds int
+)
+returns public.leagues
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_league public.leagues;
+begin
+  update public.leagues
+  set
+    roster_size = p_roster_size,
+    waiver_mode = p_waiver_mode,
+    waiver_claim_method = p_waiver_claim_method,
+    pick_time_limit_seconds = p_pick_time_limit_seconds
+  where id = p_league_id and commissioner_id = auth.uid()
+  returning * into v_league;
+
+  if not found then
+    raise exception 'Only the commissioner can update league settings';
+  end if;
+
+  return v_league;
+end;
+$$;
+
+create function public.update_scoring_settings(
+  p_league_id uuid,
+  p_judges_score_multiplier numeric,
+  p_survival_points numeric,
+  p_elimination_prediction_points numeric,
+  p_top_scorer_prediction_points numeric,
+  p_first_place_points numeric,
+  p_second_place_points numeric,
+  p_third_place_points numeric
+)
+returns public.scoring_settings
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_settings public.scoring_settings;
+begin
+  update public.scoring_settings
+  set
+    judges_score_multiplier = p_judges_score_multiplier,
+    survival_points = p_survival_points,
+    elimination_prediction_points = p_elimination_prediction_points,
+    top_scorer_prediction_points = p_top_scorer_prediction_points,
+    first_place_points = p_first_place_points,
+    second_place_points = p_second_place_points,
+    third_place_points = p_third_place_points
+  where league_id = p_league_id
+    and exists (
+      select 1 from public.leagues
+      where id = p_league_id and commissioner_id = auth.uid()
+    )
+  returning * into v_settings;
+
+  if not found then
+    raise exception 'Only the commissioner can update scoring settings';
+  end if;
+
+  return v_settings;
+end;
+$$;
+
+revoke execute on function public.update_league_settings(uuid, int, text, text, int) from public;
+revoke execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
+grant execute on function public.update_league_settings(uuid, int, text, text, int) to authenticated;
+grant execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to authenticated;

@@ -637,6 +637,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      is_league_member: { Args: { p_league_id: string }; Returns: boolean }
       join_league: {
         Args: { p_invite_code: string }
         Returns: {
@@ -655,6 +656,62 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "leagues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_league_settings: {
+        Args: {
+          p_league_id: string
+          p_pick_time_limit_seconds: number
+          p_roster_size: number
+          p_waiver_claim_method: string
+          p_waiver_mode: string
+        }
+        Returns: {
+          commissioner_id: string
+          created_at: string
+          draft_scheduled_at: string | null
+          draft_status: string
+          id: string
+          invite_code: string
+          name: string
+          pick_time_limit_seconds: number
+          roster_size: number
+          waiver_claim_method: string | null
+          waiver_mode: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leagues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_scoring_settings: {
+        Args: {
+          p_elimination_prediction_points: number
+          p_first_place_points: number
+          p_judges_score_multiplier: number
+          p_league_id: string
+          p_second_place_points: number
+          p_survival_points: number
+          p_third_place_points: number
+          p_top_scorer_prediction_points: number
+        }
+        Returns: {
+          elimination_prediction_points: number
+          first_place_points: number
+          judges_score_multiplier: number
+          league_id: string
+          second_place_points: number
+          survival_points: number
+          third_place_points: number
+          top_scorer_prediction_points: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "scoring_settings"
           isOneToOne: true
           isSetofReturn: false
         }
