@@ -38,6 +38,18 @@ coverage/
 # Misc
 *.tmp
 *.swp
+*.pem
+
+# Next.js
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+
+# Supabase CLI local cache
+supabase/.temp/
+/.pnp
+.pnp.js
+.yarn/install-state.gz
 
 # Claude Code local settings
 .claude/settings.local.json
