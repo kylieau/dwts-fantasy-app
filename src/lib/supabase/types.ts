@@ -660,11 +660,54 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      make_draft_pick: {
+        Args: { p_couple_id: string; p_league_id: string }
+        Returns: {
+          couple_id: string
+          id: string
+          league_id: string
+          manager_id: string
+          pick_number: number
+          picked_at: string
+          round: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "draft_picks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_draft_order: {
+        Args: { p_league_id: string; p_ordered_user_ids: string[] }
+        Returns: undefined
+      }
+      start_draft: {
+        Args: { p_league_id: string }
+        Returns: {
+          commissioner_id: string
+          created_at: string
+          draft_scheduled_at: string | null
+          draft_status: string
+          id: string
+          invite_code: string
+          name: string
+          pick_time_limit_seconds: number
+          roster_size: number
+          waiver_claim_method: string | null
+          waiver_mode: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leagues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_league_settings: {
         Args: {
           p_league_id: string
           p_pick_time_limit_seconds: number
-          p_roster_size: number
           p_waiver_claim_method: string
           p_waiver_mode: string
         }

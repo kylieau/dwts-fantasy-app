@@ -76,22 +76,13 @@ export default async function LeagueSettingsPage({
       <Card>
         <CardHeader>
           <CardTitle>League settings</CardTitle>
-          <CardDescription>Roster size, waivers, and draft timing.</CardDescription>
+          <CardDescription>
+            Waivers and draft timing. Roster size is set automatically when the
+            draft starts (couples ÷ members).
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form action={boundUpdateLeagueSettings} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="rosterSize">Roster size</Label>
-              <Input
-                id="rosterSize"
-                name="rosterSize"
-                type="number"
-                min={1}
-                defaultValue={league.roster_size}
-                required
-              />
-            </div>
-
             <div className="flex flex-col gap-2">
               <Label htmlFor="waiverMode">Waiver mode</Label>
               <Select name="waiverMode" defaultValue={league.waiver_mode}>

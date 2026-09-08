@@ -380,9 +380,11 @@ create policy "scoring settings are viewable by league members"
 on public.scoring_settings for select
 using (public.is_league_member(league_id));
 
+-- roster_size is NOT settable here — it's derived from couples-count /
+-- member-count and only ever set by start_draft, once the member list (and
+-- therefore the even split) is locked in.
 create function public.update_league_settings(
   p_league_id uuid,
-  p_roster_size int,
   p_waiver_mode text,
   p_waiver_claim_method text,
   p_pick_time_limit_seconds int
@@ -396,7 +398,6 @@ declare
 begin
   update public.leagues
   set
-    roster_size = p_roster_size,
     waiver_mode = p_waiver_mode,
     waiver_claim_method = p_waiver_claim_method,
     pick_time_limit_seconds = p_pick_time_limit_seconds
@@ -452,7 +453,217 @@ begin
 end;
 $$;
 
-revoke execute on function public.update_league_settings(uuid, int, text, text, int) from public;
+revoke execute on function public.update_league_settings(uuid, text, text, int) from public;
 revoke execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
-grant execute on function public.update_league_settings(uuid, int, text, text, int) to authenticated;
+grant execute on function public.update_league_settings(uuid, text, text, int) to authenticated;
 grant execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to authenticated;
+
+-- ============================================================
+-- Draft: couples are global read-only reference data; starting the draft and
+-- making picks are SECURITY DEFINER functions so turn order, one-couple-per-
+-- league uniqueness, and completion/roster-seeding are enforced server-side —
+-- a client can't skip its turn or claim an already-picked couple by racing
+-- the UI, since the server recomputes whose turn it is from the pick count
+-- every call (under a row lock on the league, to close the race between two
+-- simultaneous picks).
+-- ============================================================
+
+grant select on public.couples to authenticated;
+
+create policy "couples are viewable by all authenticated users"
+on public.couples for select
+using (true);
+
+grant select on public.draft_picks to authenticated;
+
+create policy "draft picks are viewable by league members"
+on public.draft_picks for select
+using (public.is_league_member(league_id));
+
+-- Sets (or overwrites) the full draft order before the draft starts. The
+-- client always calls this before start_draft — including for the "random"
+-- case, where the client just shuffles the list itself and submits that —
+-- so start_draft has a single, simple precondition: every member already has
+-- a position.
+create function public.set_draft_order(p_league_id uuid, p_ordered_user_ids uuid[])
+returns void
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_league public.leagues;
+  v_member_count int;
+  v_distinct_count int;
+  v_user_id uuid;
+  v_position int := 1;
+begin
+  select * into v_league from public.leagues where id = p_league_id for update;
+
+  if not found or v_league.commissioner_id <> auth.uid() then
+    raise exception 'Only the commissioner can set the draft order';
+  end if;
+
+  if v_league.draft_status <> 'not_started' then
+    raise exception 'Draft order can only be set before the draft starts';
+  end if;
+
+  select count(*) into v_member_count from public.league_members where league_id = p_league_id;
+  select count(distinct u) into v_distinct_count from unnest(p_ordered_user_ids) as u;
+
+  if array_length(p_ordered_user_ids, 1) is distinct from v_member_count
+     or v_distinct_count is distinct from v_member_count then
+    raise exception 'Order must include every league member exactly once';
+  end if;
+
+  if exists (
+    select 1 from unnest(p_ordered_user_ids) as u
+    where not exists (
+      select 1 from public.league_members lm
+      where lm.league_id = p_league_id and lm.user_id = u
+    )
+  ) then
+    raise exception 'Order includes someone who is not a member of this league';
+  end if;
+
+  foreach v_user_id in array p_ordered_user_ids loop
+    update public.league_members
+    set draft_position = v_position
+    where league_id = p_league_id and user_id = v_user_id;
+    v_position := v_position + 1;
+  end loop;
+end;
+$$;
+
+create function public.start_draft(p_league_id uuid)
+returns public.leagues
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_league public.leagues;
+  v_member_count int;
+  v_couple_count int;
+begin
+  select * into v_league from public.leagues where id = p_league_id for update;
+
+  if not found or v_league.commissioner_id <> auth.uid() then
+    raise exception 'Only the commissioner can start the draft';
+  end if;
+
+  if v_league.draft_status <> 'not_started' then
+    raise exception 'Draft has already been started';
+  end if;
+
+  select count(*) into v_member_count from public.league_members where league_id = p_league_id;
+  if v_member_count < 2 then
+    raise exception 'Need at least 2 members to start the draft';
+  end if;
+
+  if exists (
+    select 1 from public.league_members
+    where league_id = p_league_id and draft_position is null
+  ) then
+    raise exception 'Draft order has not been set for all members yet';
+  end if;
+
+  select count(*) into v_couple_count from public.couples;
+  if v_member_count > v_couple_count then
+    raise exception 'Not enough couples for every member to get at least one';
+  end if;
+
+  -- roster_size is the even split (integer division), computed here rather
+  -- than commissioner-set. Any remainder couples are left undrafted for the
+  -- season rather than handed out unevenly.
+  update public.leagues
+  set draft_status = 'in_progress', roster_size = v_couple_count / v_member_count
+  where id = p_league_id
+  returning * into v_league;
+
+  return v_league;
+end;
+$$;
+
+revoke execute on function public.set_draft_order(uuid, uuid[]) from public;
+grant execute on function public.set_draft_order(uuid, uuid[]) to authenticated;
+
+create function public.make_draft_pick(p_league_id uuid, p_couple_id uuid)
+returns public.draft_picks
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_league public.leagues;
+  v_member_count int;
+  v_total_slots int;
+  v_next_pick int;
+  v_round int;
+  v_position_in_round int;
+  v_draft_position_needed int;
+  v_expected_manager uuid;
+  v_pick public.draft_picks;
+begin
+  select * into v_league from public.leagues where id = p_league_id for update;
+
+  if not found then
+    raise exception 'League not found';
+  end if;
+
+  if v_league.draft_status <> 'in_progress' then
+    raise exception 'Draft is not in progress';
+  end if;
+
+  select count(*) into v_member_count from public.league_members where league_id = p_league_id;
+  v_total_slots := v_member_count * v_league.roster_size;
+  v_next_pick := (select count(*) from public.draft_picks where league_id = p_league_id) + 1;
+
+  if v_next_pick > v_total_slots then
+    raise exception 'Draft is already complete';
+  end if;
+
+  v_round := ((v_next_pick - 1) / v_member_count) + 1;
+  v_position_in_round := v_next_pick - (v_round - 1) * v_member_count;
+
+  -- Snake order: odd rounds go 1..N, even rounds go N..1.
+  if v_round % 2 = 1 then
+    v_draft_position_needed := v_position_in_round;
+  else
+    v_draft_position_needed := v_member_count - v_position_in_round + 1;
+  end if;
+
+  select user_id into v_expected_manager
+  from public.league_members
+  where league_id = p_league_id and draft_position = v_draft_position_needed;
+
+  if v_expected_manager is null or v_expected_manager <> auth.uid() then
+    raise exception 'It is not your turn to pick';
+  end if;
+
+  if exists (select 1 from public.draft_picks where league_id = p_league_id and couple_id = p_couple_id) then
+    raise exception 'That couple has already been drafted';
+  end if;
+
+  insert into public.draft_picks (league_id, couple_id, manager_id, round, pick_number)
+  values (p_league_id, p_couple_id, auth.uid(), v_round, v_next_pick)
+  returning * into v_pick;
+
+  if v_next_pick = v_total_slots then
+    update public.leagues set draft_status = 'completed' where id = p_league_id;
+
+    insert into public.roster_slots (league_id, manager_id, slot_number, couple_id, source, start_week)
+    select league_id, manager_id, row_number() over (partition by manager_id order by pick_number), couple_id, 'draft', 1
+    from public.draft_picks
+    where league_id = p_league_id;
+  end if;
+
+  return v_pick;
+end;
+$$;
+
+revoke execute on function public.start_draft(uuid) from public;
+revoke execute on function public.make_draft_pick(uuid, uuid) from public;
+grant execute on function public.start_draft(uuid) to authenticated;
+grant execute on function public.make_draft_pick(uuid, uuid) to authenticated;
+
+alter publication supabase_realtime add table public.leagues;
+alter publication supabase_realtime add table public.league_members;
+alter publication supabase_realtime add table public.draft_picks;

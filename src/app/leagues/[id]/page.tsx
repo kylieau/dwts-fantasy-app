@@ -58,11 +58,16 @@ export default async function LeaguePage({
           </p>
           {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         </div>
-        {league.commissioner_id === user.id && (
-          <Button render={<Link href={`/leagues/${id}/settings`} />} variant="outline" size="sm">
-            Settings
+        <div className="flex gap-2">
+          <Button render={<Link href={`/leagues/${id}/draft`} />} size="sm">
+            Draft room
           </Button>
-        )}
+          {league.commissioner_id === user.id && (
+            <Button render={<Link href={`/leagues/${id}/settings`} />} variant="outline" size="sm">
+              Settings
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>

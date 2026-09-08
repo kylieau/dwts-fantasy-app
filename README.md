@@ -57,14 +57,14 @@ Each milestone should be independently testable before moving to the next.
 - [x] **Verify:** a non-commissioner manager can't access or edit settings; commissioner's changes persist and display correctly
 
 ### Phase 4 — Live Snake Draft
-- [ ] Seed the `couples` table for the active season
-- [ ] Assign draft order/position to league members
-- [ ] Build draft room UI: available vs. drafted couples board
-- [ ] Wire Supabase Realtime so picks broadcast live to all connected managers
-- [ ] Build turn indicator with an automated per-pick timer
-- [ ] Write `draft_picks` on each pick; enforce one-couple-per-league uniqueness
-- [ ] Seed `roster_slots` from `draft_picks` when the draft completes
-- [ ] **Verify:** two browsers in the same draft room see picks appear in real time, and an already-picked couple can't be picked again
+- [x] Seed the `couples` table for the active season — real Season cast, see `supabase/seed.sql`
+- [x] Assign draft order/position to league members — commissioner can shuffle or manually reorder before starting
+- [x] Build draft room UI: available vs. drafted couples board
+- [x] Wire Supabase Realtime so picks broadcast live to all connected managers
+- [x] Build turn indicator with a per-pick timer — visual/informational only, no server-side auto-skip on timeout (deliberately scoped out; would need a scheduled job)
+- [x] Write `draft_picks` on each pick; enforce one-couple-per-league uniqueness — turn order and uniqueness enforced inside the `make_draft_pick` SECURITY DEFINER function, not trusted from the client
+- [x] Seed `roster_slots` from `draft_picks` when the draft completes — `roster_size` is computed as `floor(couples ÷ members)` and set automatically when the draft starts (no longer commissioner-editable); the draft stops at member_count × roster_size, leaving any remainder couples undrafted for the season rather than splitting unevenly
+- [x] **Verify:** two browsers in the same draft room see picks appear in real time, and an already-picked couple can't be picked again
 
 ### Phase 5 — Scoring Engine & Admin Results Entry
 - [ ] Build admin results-entry form: dance scores per couple per episode (supports multiple dances)

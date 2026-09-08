@@ -12,7 +12,6 @@ export async function updateLeagueSettings(leagueId: string, formData: FormData)
 
   const { error } = await supabase.rpc("update_league_settings", {
     p_league_id: leagueId,
-    p_roster_size: Number(formData.get("rosterSize")),
     p_waiver_mode: waiverMode,
     // The generated RPC arg type doesn't model that this Postgres param accepts
     // NULL (required when waiver_mode is "locked"); the DB happily allows it.
