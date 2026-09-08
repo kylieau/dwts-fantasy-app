@@ -24,13 +24,13 @@ export async function SiteHeader() {
   }
 
   return (
-    <header className="border-b border-border">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+    <header className="border-b border-border pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center justify-between gap-y-2 px-4 py-2">
         <Link href="/" className="text-sm font-semibold tracking-tight">
           Mirrorball Madness
         </Link>
         {user ? (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {leagues.length > 0 && <LeagueSwitcher leagues={leagues} />}
             <Button render={<Link href="/leagues" />} variant="ghost" size="sm">
               Leagues
@@ -40,7 +40,9 @@ export async function SiteHeader() {
                 Admin
               </Button>
             )}
-            <span className="text-sm text-muted-foreground">{displayName}</span>
+            <span className="hidden text-sm text-muted-foreground sm:inline">
+              {displayName}
+            </span>
             <form action={signOut}>
               <Button type="submit" variant="outline" size="sm">
                 Sign out
