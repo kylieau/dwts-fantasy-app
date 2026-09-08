@@ -615,6 +615,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_waiver_claim: {
+        Args: { p_claim_id: string }
+        Returns: {
+          couple_id: string
+          created_at: string
+          id: string
+          league_id: string
+          manager_id: string
+          priority_order: number | null
+          resolved_at: string | null
+          slot_number: number
+          status: string
+          week_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "waiver_claims"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_league: {
         Args: { p_name: string }
         Returns: {
@@ -633,6 +654,27 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "leagues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_waiver_claim: {
+        Args: { p_claim_id: string }
+        Returns: {
+          couple_id: string
+          created_at: string
+          id: string
+          league_id: string
+          manager_id: string
+          priority_order: number | null
+          resolved_at: string | null
+          slot_number: number
+          status: string
+          week_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "waiver_claims"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -674,6 +716,31 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "draft_picks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      process_reverse_standings_waivers: {
+        Args: { p_league_id: string }
+        Returns: undefined
+      }
+      reject_waiver_claim: {
+        Args: { p_claim_id: string }
+        Returns: {
+          couple_id: string
+          created_at: string
+          id: string
+          league_id: string
+          manager_id: string
+          priority_order: number | null
+          resolved_at: string | null
+          slot_number: number
+          status: string
+          week_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "waiver_claims"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -723,6 +790,31 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "predictions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_waiver_claim: {
+        Args: {
+          p_couple_id: string
+          p_league_id: string
+          p_slot_number: number
+        }
+        Returns: {
+          couple_id: string
+          created_at: string
+          id: string
+          league_id: string
+          manager_id: string
+          priority_order: number | null
+          resolved_at: string | null
+          slot_number: number
+          status: string
+          week_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "waiver_claims"
           isOneToOne: true
           isSetofReturn: false
         }

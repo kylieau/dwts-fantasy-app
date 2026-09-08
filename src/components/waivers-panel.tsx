@@ -1,0 +1,197 @@
+"use client";
+
+import { useState } from "react";
+import {
+  submitWaiverClaim,
+  processReverseStandingsWaivers,
+  approveWaiverClaim,
+  rejectWaiverClaim,
+} from "@/app/leagues/[id]/waivers/actions";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type Couple = { id: string; celebrity_name: string; pro_name: string };
+type OpenSlot = { slotNumber: number; formerCoupleName: string };
+type Claim = {
+  id: string;
+  managerName: string;
+  coupleName: string;
+  slotNumber: number;
+  status: string;
+  createdAt: string;
+};
+
+export function WaiversPanel({
+  leagueId,
+  claimMethod,
+  isCommissioner,
+  openSlots,
+  availableCouples,
+  claims,
+}: {
+  leagueId: string;
+  claimMethod: string;
+  isCommissioner: boolean;
+  openSlots: OpenSlot[];
+  availableCouples: Couple[];
+  claims: Claim[];
+}) {
+  const [selections, setSelections] = useState<Record<number, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function handleClaim(slotNumber: number) {
+    const coupleId = selections[slotNumber];
+    if (!coupleId) return;
+    setError(null);
+    setMessage(null);
+    setBusy(true);
+    const result = await submitWaiverClaim(leagueId, slotNumber, coupleId);
+    if (result.error) setError(result.error);
+    else setMessage("Claim submitted.");
+    setBusy(false);
+  }
+
+  async function handleProcess() {
+    setError(null);
+    setMessage(null);
+    setBusy(true);
+    const result = await processReverseStandingsWaivers(leagueId);
+    if (result.error) setError(result.error);
+    else setMessage("Waivers processed.");
+    setBusy(false);
+  }
+
+  async function handleApprove(claimId: string) {
+    setError(null);
+    setBusy(true);
+    const result = await approveWaiverClaim(leagueId, claimId);
+    if (result.error) setError(result.error);
+    setBusy(false);
+  }
+
+  async function handleReject(claimId: string) {
+    setError(null);
+    setBusy(true);
+    const result = await rejectWaiverClaim(leagueId, claimId);
+    if (result.error) setError(result.error);
+    setBusy(false);
+  }
+
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-12">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Waivers</h1>
+        <p className="mt-1 text-sm capitalize text-muted-foreground">
+          {claimMethod.replace("_", " ")} claim method
+        </p>
+        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+        {message && <p className="mt-2 text-sm text-muted-foreground">{message}</p>}
+      </div>
+
+      {openSlots.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Your open slots</CardTitle>
+            <CardDescription>Claim a replacement from the available couples.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {openSlots.map((slot) => (
+              <div key={slot.slotNumber} className="flex items-center gap-3">
+                <span className="w-40 shrink-0 text-sm text-muted-foreground">
+                  Slot {slot.slotNumber} ({slot.formerCoupleName})
+                </span>
+                <Select
+                  value={selections[slot.slotNumber] ?? ""}
+                  onValueChange={(v) =>
+                    setSelections((prev) => ({ ...prev, [slot.slotNumber]: v ?? "" }))
+                  }
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Pick a couple" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCouples.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.celebrity_name} &amp; {c.pro_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  disabled={busy || !selections[slot.slotNumber]}
+                  onClick={() => handleClaim(slot.slotNumber)}
+                >
+                  Claim
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Available couples</CardTitle>
+          <CardDescription>{availableCouples.length} on the wire</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-1">
+          {availableCouples.map((c) => (
+            <p key={c.id} className="text-sm">
+              {c.celebrity_name} &amp; {c.pro_name}
+            </p>
+          ))}
+        </CardContent>
+      </Card>
+
+      {isCommissioner && claimMethod === "reverse_standings" && (
+        <Button onClick={handleProcess} disabled={busy}>
+          Process pending waivers
+        </Button>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Claims</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {claims.map((c) => (
+            <div key={c.id} className="flex items-center justify-between text-sm">
+              <span>
+                {c.managerName} → {c.coupleName} (slot {c.slotNumber})
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="capitalize text-muted-foreground">{c.status}</span>
+                {isCommissioner && claimMethod === "manual" && c.status === "pending" && (
+                  <>
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => handleApprove(c.id)}>
+                      Approve
+                    </Button>
+                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => handleReject(c.id)}>
+                      Reject
+                    </Button>
+                  </>
+                )}
+              </span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

@@ -773,3 +773,257 @@ $$;
 
 revoke execute on function public.submit_prediction(uuid, uuid, uuid, uuid) from public;
 grant execute on function public.submit_prediction(uuid, uuid, uuid, uuid) to authenticated;
+
+-- ============================================================
+-- Waivers. roster_slots is a timeline: a slot's *current* occupancy is the
+-- row with end_week is null; a slot is "open" when that current row's couple
+-- has been eliminated. Claiming closes the old row (end_week = the claim's
+-- week_number) and inserts a new one (source 'waiver', start_week = that
+-- week + 1) — so the new couple starts scoring the following week, and nothing
+-- ever needs a null couple_id.
+--
+-- grant select on roster_slots was missing entirely before this phase — the
+-- Phase 6 roster card has been silently getting a permission-denied error
+-- and rendering nothing, since its query result was never checked for error.
+-- ============================================================
+
+grant select on public.roster_slots to authenticated;
+create policy "roster slots are viewable by league members"
+on public.roster_slots for select
+using (public.is_league_member(league_id));
+
+drop index if exists idx_roster_slots_open;
+
+grant select on public.waiver_claims to authenticated;
+create policy "waiver claims are viewable by league members"
+on public.waiver_claims for select
+using (public.is_league_member(league_id));
+
+-- Internal-only: does the actual roster swap + bookkeeping once a claim is
+-- decided. No permission check of its own — every caller below has already
+-- verified the caller is allowed to decide this claim before calling it.
+create function public.finalize_waiver_claim(p_claim_id uuid)
+returns public.waiver_claims
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_claim public.waiver_claims;
+begin
+  select * into v_claim from public.waiver_claims where id = p_claim_id for update;
+  if not found then
+    raise exception 'Waiver claim not found';
+  end if;
+
+  update public.roster_slots
+  set end_week = v_claim.week_number
+  where league_id = v_claim.league_id
+    and manager_id = v_claim.manager_id
+    and slot_number = v_claim.slot_number
+    and end_week is null;
+
+  insert into public.roster_slots (league_id, manager_id, slot_number, couple_id, source, start_week)
+  values (v_claim.league_id, v_claim.manager_id, v_claim.slot_number, v_claim.couple_id, 'waiver', v_claim.week_number + 1);
+
+  update public.waiver_claims
+  set status = 'approved', resolved_at = now()
+  where id = p_claim_id
+  returning * into v_claim;
+
+  -- Other pending claims for the same couple (lost the bidding) or the same
+  -- manager+slot (can't fill one slot twice) are now moot.
+  update public.waiver_claims
+  set status = 'rejected', resolved_at = now()
+  where id <> p_claim_id
+    and status = 'pending'
+    and league_id = v_claim.league_id
+    and (
+      couple_id = v_claim.couple_id
+      or (manager_id = v_claim.manager_id and slot_number = v_claim.slot_number)
+    );
+
+  return v_claim;
+end;
+$$;
+
+revoke execute on function public.finalize_waiver_claim(uuid) from public, authenticated;
+
+create function public.submit_waiver_claim(
+  p_league_id uuid,
+  p_slot_number int,
+  p_couple_id uuid
+)
+returns public.waiver_claims
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_league public.leagues;
+  v_current_week int;
+  v_claim public.waiver_claims;
+begin
+  if not public.is_league_member(p_league_id) then
+    raise exception 'You are not a member of this league';
+  end if;
+
+  -- Locks the league for the rest of this call, serializing concurrent
+  -- claims for the same league so two FCFS claims for the same couple can't
+  -- both see it as "available" at once.
+  select * into v_league from public.leagues where id = p_league_id for update;
+
+  if v_league.waiver_mode <> 'waivers' then
+    raise exception 'This league does not use waivers';
+  end if;
+
+  if not exists (
+    select 1 from public.roster_slots rs
+    join public.couples c on c.id = rs.couple_id
+    where rs.league_id = p_league_id
+      and rs.manager_id = auth.uid()
+      and rs.slot_number = p_slot_number
+      and rs.end_week is null
+      and c.status = 'eliminated'
+  ) then
+    raise exception 'That slot is not open for a waiver claim';
+  end if;
+
+  if not exists (select 1 from public.couples where id = p_couple_id and status = 'active') then
+    raise exception 'That couple is not available';
+  end if;
+
+  if exists (
+    select 1 from public.roster_slots
+    where league_id = p_league_id and couple_id = p_couple_id and end_week is null
+  ) then
+    raise exception 'That couple is already on a roster in this league';
+  end if;
+
+  v_current_week := coalesce((select max(week_number) from public.episodes where status = 'completed'), 0);
+
+  insert into public.waiver_claims (league_id, couple_id, manager_id, slot_number, week_number, status)
+  values (p_league_id, p_couple_id, auth.uid(), p_slot_number, v_current_week, 'pending')
+  returning * into v_claim;
+
+  -- FCFS resolves immediately; reverse_standings/manual stay pending for the
+  -- commissioner to process (the other bidders for the same couple aren't
+  -- known yet, so there's nothing to compare against right now).
+  if v_league.waiver_claim_method = 'fcfs' then
+    return public.finalize_waiver_claim(v_claim.id);
+  end if;
+
+  return v_claim;
+end;
+$$;
+
+revoke execute on function public.submit_waiver_claim(uuid, int, uuid) from public;
+grant execute on function public.submit_waiver_claim(uuid, int, uuid) to authenticated;
+
+create function public.process_reverse_standings_waivers(p_league_id uuid)
+returns void
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_league public.leagues;
+  v_couple_id uuid;
+  v_winning_claim_id uuid;
+begin
+  select * into v_league from public.leagues where id = p_league_id for update;
+
+  if not found or v_league.commissioner_id <> auth.uid() then
+    raise exception 'Only the commissioner can process waivers';
+  end if;
+
+  if v_league.waiver_claim_method <> 'reverse_standings' then
+    raise exception 'This league does not use reverse-standings waivers';
+  end if;
+
+  for v_couple_id in
+    select distinct couple_id from public.waiver_claims
+    where league_id = p_league_id and status = 'pending'
+  loop
+    -- Lowest season total wins the couple; ties go to whoever claimed first.
+    -- A couple's claims can already be gone by the time we get here (a
+    -- manager's other pending claim for the same slot may have just been
+    -- auto-rejected by finalize_waiver_claim earlier in this same loop).
+    select wc.id into v_winning_claim_id
+    from public.waiver_claims wc
+    left join (
+      select manager_id, coalesce(sum(total_points), 0) as points
+      from public.weekly_manager_scores
+      where league_id = p_league_id
+      group by manager_id
+    ) totals on totals.manager_id = wc.manager_id
+    where wc.league_id = p_league_id and wc.couple_id = v_couple_id and wc.status = 'pending'
+    order by coalesce(totals.points, 0) asc, wc.created_at asc
+    limit 1;
+
+    if v_winning_claim_id is not null then
+      perform public.finalize_waiver_claim(v_winning_claim_id);
+    end if;
+  end loop;
+end;
+$$;
+
+revoke execute on function public.process_reverse_standings_waivers(uuid) from public;
+grant execute on function public.process_reverse_standings_waivers(uuid) to authenticated;
+
+create function public.approve_waiver_claim(p_claim_id uuid)
+returns public.waiver_claims
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_claim public.waiver_claims;
+  v_league public.leagues;
+begin
+  select * into v_claim from public.waiver_claims where id = p_claim_id;
+  if not found then
+    raise exception 'Waiver claim not found';
+  end if;
+
+  select * into v_league from public.leagues where id = v_claim.league_id;
+  if v_league.commissioner_id <> auth.uid() then
+    raise exception 'Only the commissioner can approve waiver claims';
+  end if;
+
+  if v_claim.status <> 'pending' then
+    raise exception 'This claim has already been resolved';
+  end if;
+
+  return public.finalize_waiver_claim(p_claim_id);
+end;
+$$;
+
+create function public.reject_waiver_claim(p_claim_id uuid)
+returns public.waiver_claims
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_claim public.waiver_claims;
+  v_league public.leagues;
+begin
+  select * into v_claim from public.waiver_claims where id = p_claim_id;
+  if not found then
+    raise exception 'Waiver claim not found';
+  end if;
+
+  select * into v_league from public.leagues where id = v_claim.league_id;
+  if v_league.commissioner_id <> auth.uid() then
+    raise exception 'Only the commissioner can reject waiver claims';
+  end if;
+
+  update public.waiver_claims
+  set status = 'rejected', resolved_at = now()
+  where id = p_claim_id
+  returning * into v_claim;
+
+  return v_claim;
+end;
+$$;
+
+revoke execute on function public.approve_waiver_claim(uuid) from public;
+revoke execute on function public.reject_waiver_claim(uuid) from public;
+grant execute on function public.approve_waiver_claim(uuid) to authenticated;
+grant execute on function public.reject_waiver_claim(uuid) to authenticated;

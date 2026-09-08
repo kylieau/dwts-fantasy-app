@@ -34,7 +34,7 @@ export default async function LeaguePage({
 
   const { data: league } = await supabase
     .from("leagues")
-    .select("id, name, invite_code, commissioner_id")
+    .select("id, name, invite_code, commissioner_id, waiver_mode")
     .eq("id", id)
     .single();
 
@@ -134,6 +134,11 @@ export default async function LeaguePage({
           <Button render={<Link href={`/leagues/${id}/draft`} />} size="sm">
             Draft room
           </Button>
+          {league.waiver_mode === "waivers" && (
+            <Button render={<Link href={`/leagues/${id}/waivers`} />} variant="outline" size="sm">
+              Waivers
+            </Button>
+          )}
           {league.commissioner_id === user.id && (
             <Button render={<Link href={`/leagues/${id}/settings`} />} variant="outline" size="sm">
               Settings
