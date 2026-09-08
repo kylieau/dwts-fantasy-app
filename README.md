@@ -67,12 +67,12 @@ Each milestone should be independently testable before moving to the next.
 - [x] **Verify:** two browsers in the same draft room see picks appear in real time, and an already-picked couple can't be picked again
 
 ### Phase 5 — Scoring Engine & Admin Results Entry
-- [ ] Build admin results-entry form: dance scores per couple per episode (supports multiple dances)
-- [ ] Build admin results-entry form: episode outcomes (safe / eliminated / bottom-two / saved / podium)
-- [ ] Write the `computeWeeklyScores` pure function (roster points + survival + prediction matches + podium bonus)
-- [ ] Unit test `computeWeeklyScores`: single dance, multi-dance week, judges'-save override, finale podium
-- [ ] Wire results submission to populate `weekly_manager_scores` for every affected league
-- [ ] **Verify:** submitting one week's results correctly updates point totals across two leagues with different custom scoring weights
+- [x] Build admin results-entry form: dance scores per couple per episode (supports multiple dances) — comma-separated scores per couple, e.g. "24, 27" for a two-dance week
+- [x] Build admin results-entry form: episode outcomes (safe / eliminated / bottom-two / saved / podium)
+- [x] Write the `computeWeeklyScores` pure function (roster points + survival + prediction matches + podium bonus) — `src/lib/scoring.ts`, no DB access, fully unit-testable
+- [x] Unit test `computeWeeklyScores`: single dance, multi-dance week, judges'-save override, finale podium — `npm test` (Vitest, newly set up this phase)
+- [x] Wire results submission to populate `weekly_manager_scores` for every affected league — runs server-side via the service_role key after checking `profiles.is_super_admin` (results entry is a cross-league admin operation, not scoped to one league's RLS)
+- [x] **Verify:** submitting one week's results correctly updates point totals across two leagues with different custom scoring weights — confirmed via a real `applyEpisodeResults` call against two live leagues with different weights, producing different, correctly-computed totals from the same underlying results
 
 ### Phase 6 — Manager Dashboard & Pick 'Em
 - [ ] Build team roster card (active + eliminated couples, cumulative points)

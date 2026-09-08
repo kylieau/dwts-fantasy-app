@@ -47,6 +47,13 @@ next-env.d.ts
 
 # Supabase CLI local cache
 supabase/.temp/
+
+# Capacitor / Xcode
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+ios/DerivedData/
 /.pnp
 .pnp.js
 .yarn/install-state.gz

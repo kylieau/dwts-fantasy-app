@@ -667,3 +667,36 @@ grant execute on function public.make_draft_pick(uuid, uuid) to authenticated;
 alter publication supabase_realtime add table public.leagues;
 alter publication supabase_realtime add table public.league_members;
 alter publication supabase_realtime add table public.draft_picks;
+
+-- ============================================================
+-- Results entry: episodes/dance_scores/episode_results are global (like
+-- couples) and readable by every authenticated user. weekly_manager_scores
+-- is league-scoped like everything else in a league.
+--
+-- The actual write path (episodes, dance_scores, episode_results, couples
+-- status, weekly_manager_scores) is NOT exposed via RLS/grants at all —
+-- results entry is a cross-league admin operation (one submission recomputes
+-- scores for every league that has relevant rosters/predictions), so it runs
+-- server-side via the service_role key after checking profiles.is_super_admin
+-- in application code, rather than through a SECURITY DEFINER function.
+-- ============================================================
+
+grant select on public.episodes to authenticated;
+create policy "episodes are viewable by all authenticated users"
+on public.episodes for select
+using (true);
+
+grant select on public.dance_scores to authenticated;
+create policy "dance scores are viewable by all authenticated users"
+on public.dance_scores for select
+using (true);
+
+grant select on public.episode_results to authenticated;
+create policy "episode results are viewable by all authenticated users"
+on public.episode_results for select
+using (true);
+
+grant select on public.weekly_manager_scores to authenticated;
+create policy "weekly manager scores are viewable by league members"
+on public.weekly_manager_scores for select
+using (public.is_league_member(league_id));

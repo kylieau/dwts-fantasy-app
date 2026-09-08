@@ -12,12 +12,14 @@ export async function SiteHeader() {
 
   let displayName: string | null = null;
   let leagues: { id: string; name: string }[] = [];
+  let isSuperAdmin = false;
   if (user) {
     const [{ data: profile }, { data: memberships }] = await Promise.all([
-      supabase.from("profiles").select("display_name").eq("id", user.id).single(),
+      supabase.from("profiles").select("display_name, is_super_admin").eq("id", user.id).single(),
       supabase.from("league_members").select("leagues(id, name)").eq("user_id", user.id),
     ]);
     displayName = profile?.display_name ?? user.email ?? null;
+    isSuperAdmin = profile?.is_super_admin ?? false;
     leagues = memberships?.map((m) => m.leagues!).filter(Boolean) ?? [];
   }
 
@@ -33,6 +35,11 @@ export async function SiteHeader() {
             <Button render={<Link href="/leagues" />} variant="ghost" size="sm">
               Leagues
             </Button>
+            {isSuperAdmin && (
+              <Button render={<Link href="/admin/results" />} variant="ghost" size="sm">
+                Admin
+              </Button>
+            )}
             <span className="text-sm text-muted-foreground">{displayName}</span>
             <form action={signOut}>
               <Button type="submit" variant="outline" size="sm">
