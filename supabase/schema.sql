@@ -244,7 +244,15 @@ create trigger on_auth_user_created
 -- A manager needs to read/update their own profile (e.g. the header, account
 -- settings). Broader visibility (e.g. to fellow league members) is added in
 -- Phase 2 alongside league_members policies.
-grant select, update on public.profiles to authenticated;
+--
+-- UPDATE is column-restricted, not blanket: the "owner" policy below only
+-- checks row ownership (auth.uid() = id), so a blanket UPDATE grant would let
+-- any user set is_super_admin = true on themselves directly through the
+-- profiles table — this was live in production and self-confirmed exploitable
+-- before being caught in the Phase 8 security review. display_name/avatar_url
+-- are the only columns a user should ever be able to set on their own row.
+grant select on public.profiles to authenticated;
+grant update (display_name, avatar_url) on public.profiles to authenticated;
 
 create policy "profiles are viewable by the owner"
 on public.profiles for select
@@ -346,6 +354,9 @@ as $$
     where league_id = p_league_id and user_id = auth.uid()
   );
 $$;
+
+revoke execute on function public.is_league_member(uuid) from public;
+grant execute on function public.is_league_member(uuid) to authenticated;
 
 create policy "leagues are viewable by members"
 on public.leagues for select

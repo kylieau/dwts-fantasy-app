@@ -103,7 +103,7 @@ export function ResultsForm({ couples }: { couples: Couple[] }) {
         <CardHeader>
           <CardTitle>Episode</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <Label>Week number</Label>
             <Input
@@ -156,13 +156,13 @@ export function ResultsForm({ couples }: { couples: Couple[] }) {
             return (
               <div
                 key={c.id}
-                className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-3 border-b border-border pb-3 text-sm last:border-b-0"
+                className="flex flex-col gap-2 border-b border-border pb-3 text-sm last:border-b-0 lg:grid lg:grid-cols-[1fr_auto_auto_auto_auto] lg:items-center lg:gap-3"
               >
                 <span>
                   {c.celebrity_name} &amp; {c.pro_name}
                 </span>
                 <Input
-                  className="w-32"
+                  className="w-full lg:w-32"
                   placeholder="e.g. 24, 27"
                   value={entry.scoresText}
                   onChange={(e) => updateEntry(c.id, { scoresText: e.target.value })}
@@ -171,7 +171,7 @@ export function ResultsForm({ couples }: { couples: Couple[] }) {
                   value={entry.outcome}
                   onValueChange={(v) => updateEntry(c.id, { outcome: v as Outcome })}
                 >
-                  <SelectTrigger size="sm" className="w-36">
+                  <SelectTrigger size="sm" className="w-full lg:w-36">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -182,22 +182,24 @@ export function ResultsForm({ couples }: { couples: Couple[] }) {
                     <SelectItem value="third_place">Third place</SelectItem>
                   </SelectContent>
                 </Select>
-                <label className="flex items-center gap-1 whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    checked={entry.wasBottomTwo}
-                    onChange={(e) => updateEntry(c.id, { wasBottomTwo: e.target.checked })}
-                  />
-                  Bottom 2
-                </label>
-                <label className="flex items-center gap-1 whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    checked={entry.savedByJudges}
-                    onChange={(e) => updateEntry(c.id, { savedByJudges: e.target.checked })}
-                  />
-                  Saved
-                </label>
+                <div className="flex items-center gap-4 lg:contents">
+                  <label className="flex items-center gap-1 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={entry.wasBottomTwo}
+                      onChange={(e) => updateEntry(c.id, { wasBottomTwo: e.target.checked })}
+                    />
+                    Bottom 2
+                  </label>
+                  <label className="flex items-center gap-1 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={entry.savedByJudges}
+                      onChange={(e) => updateEntry(c.id, { savedByJudges: e.target.checked })}
+                    />
+                    Saved
+                  </label>
+                </div>
               </div>
             );
           })}

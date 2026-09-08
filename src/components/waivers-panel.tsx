@@ -111,8 +111,8 @@ export function WaiversPanel({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {openSlots.map((slot) => (
-              <div key={slot.slotNumber} className="flex items-center gap-3">
-                <span className="w-40 shrink-0 text-sm text-muted-foreground">
+              <div key={slot.slotNumber} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <span className="text-sm text-muted-foreground sm:w-40 sm:shrink-0">
                   Slot {slot.slotNumber} ({slot.formerCoupleName})
                 </span>
                 <Select
@@ -121,7 +121,7 @@ export function WaiversPanel({
                     setSelections((prev) => ({ ...prev, [slot.slotNumber]: v ?? "" }))
                   }
                 >
-                  <SelectTrigger className="flex-1">
+                  <SelectTrigger className="w-full sm:flex-1">
                     <SelectValue placeholder="Pick a couple" />
                   </SelectTrigger>
                   <SelectContent>
@@ -171,11 +171,11 @@ export function WaiversPanel({
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {claims.map((c) => (
-            <div key={c.id} className="flex items-center justify-between text-sm">
+            <div key={c.id} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm">
               <span>
                 {c.managerName} → {c.coupleName} (slot {c.slotNumber})
               </span>
-              <span className="flex items-center gap-2">
+              <span className="flex flex-wrap items-center gap-2">
                 <span className="capitalize text-muted-foreground">{c.status}</span>
                 {isCommissioner && claimMethod === "manual" && c.status === "pending" && (
                   <>

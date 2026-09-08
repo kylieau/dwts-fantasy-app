@@ -314,7 +314,7 @@ export function DraftRoom({
           </CardHeader>
           <CardContent className="flex max-h-96 flex-col gap-2 overflow-y-auto">
             {picks.map((p) => (
-              <div key={p.id} className="flex items-center justify-between text-sm">
+              <div key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
                 <span className="text-muted-foreground">#{p.pick_number}</span>
                 <span>{coupleLabel(p.couple_id)}</span>
                 <span className="text-muted-foreground">{managerLabel(p.manager_id)}</span>
