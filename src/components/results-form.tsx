@@ -31,10 +31,15 @@ const emptyEntry: EntryState = {
   savedByJudges: false,
 };
 
-export function ResultsForm({ couples }: { couples: Couple[] }) {
+export function ResultsForm({
+  couples,
+  coupleDisplayNames,
+}: {
+  couples: Couple[];
+  coupleDisplayNames: Record<string, string>;
+}) {
   const [weekNumber, setWeekNumber] = useState(1);
-  const [airDate, setAirDate] = useState("");
-  const [locksAt, setLocksAt] = useState("");
+  const [airsAt, setAirsAt] = useState("");
   const [isEliminationWeek, setIsEliminationWeek] = useState(true);
   const [isFinale, setIsFinale] = useState(false);
   const [entries, setEntries] = useState<Record<string, EntryState>>(() =>
@@ -70,8 +75,7 @@ export function ResultsForm({ couples }: { couples: Couple[] }) {
 
     const result = await submitEpisodeResults({
       weekNumber,
-      airDate,
-      locksAt,
+      airsAt,
       isEliminationWeek,
       isFinale,
       entries: parsedEntries,
@@ -86,11 +90,12 @@ export function ResultsForm({ couples }: { couples: Couple[] }) {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-12">
-      <h1 className="text-2xl font-semibold tracking-tight">Enter episode results</h1>
+    <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">
         Leave every couple&apos;s scores blank to just schedule the episode
-        (set its lock time) ahead of air, without entering results yet.
+        (set its air date/time) ahead of air, without entering results yet.
+        Each league locks its own Pick &apos;Em predictions some number of
+        hours before this air time — set in that league&apos;s settings.
       </p>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {success && (
@@ -114,15 +119,11 @@ export function ResultsForm({ couples }: { couples: Couple[] }) {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label>Air date</Label>
-            <Input type="date" value={airDate} onChange={(e) => setAirDate(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label>Predictions lock at</Label>
+            <Label>Air date/time</Label>
             <Input
               type="datetime-local"
-              value={locksAt}
-              onChange={(e) => setLocksAt(e.target.value)}
+              value={airsAt}
+              onChange={(e) => setAirsAt(e.target.value)}
             />
           </div>
           <div className="flex items-center gap-4 pt-6">
@@ -158,9 +159,7 @@ export function ResultsForm({ couples }: { couples: Couple[] }) {
                 key={c.id}
                 className="flex flex-col gap-2 border-b border-border pb-3 text-sm last:border-b-0 lg:grid lg:grid-cols-[1fr_auto_auto_auto_auto] lg:items-center lg:gap-3"
               >
-                <span>
-                  {c.celebrity_name} &amp; {c.pro_name}
-                </span>
+                <span>{coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}</span>
                 <Input
                   className="w-full lg:w-32"
                   placeholder="e.g. 24, 27"

@@ -40,6 +40,7 @@ export function WaiversPanel({
   isCommissioner,
   openSlots,
   availableCouples,
+  coupleDisplayNames,
   claims,
 }: {
   leagueId: string;
@@ -47,6 +48,7 @@ export function WaiversPanel({
   isCommissioner: boolean;
   openSlots: OpenSlot[];
   availableCouples: Couple[];
+  coupleDisplayNames: Record<string, string>;
   claims: Claim[];
 }) {
   const [selections, setSelections] = useState<Record<number, string>>({});
@@ -127,7 +129,7 @@ export function WaiversPanel({
                   <SelectContent>
                     {availableCouples.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.celebrity_name} &amp; {c.pro_name}
+                        {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -153,7 +155,7 @@ export function WaiversPanel({
         <CardContent className="flex flex-col gap-1">
           {availableCouples.map((c) => (
             <p key={c.id} className="text-sm">
-              {c.celebrity_name} &amp; {c.pro_name}
+              {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
             </p>
           ))}
         </CardContent>

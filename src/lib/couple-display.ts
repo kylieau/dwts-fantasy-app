@@ -1,0 +1,61 @@
+// The show refers to people by first name only — matches that on-screen
+// convention, disambiguating with a last initial only when two people in the
+// same pool (celebrities vs. pros, checked separately) would otherwise be
+// indistinguishable.
+
+// Sarah Jane Nader (Season 35) has a compound first name — plain
+// whitespace-splitting would only catch "Sarah".
+const COMPOUND_FIRST_NAMES = ["Sarah Jane"];
+
+function firstName(fullName: string): string {
+  const trimmed = fullName.trim();
+  const compound = COMPOUND_FIRST_NAMES.find((n) => trimmed.startsWith(n + " "));
+  return compound ?? trimmed.split(/\s+/)[0];
+}
+
+function lastInitial(fullName: string): string {
+  const trimmed = fullName.trim();
+  const first = firstName(trimmed);
+  const rest = trimmed.slice(first.length).trim();
+  return rest ? rest[0] : "";
+}
+
+// Connor Wood and Conner Leavitt (Season 35) are spelled differently but
+// sound identical on-air, so they're treated as the same name here — plain
+// case-insensitive matching wouldn't catch this pair.
+function collisionKey(first: string): string {
+  const lower = first.toLowerCase();
+  return lower === "connor" || lower === "conner" ? "connor" : lower;
+}
+
+function buildFirstNameMap(fullNames: string[]): Map<string, string> {
+  const counts = new Map<string, number>();
+  for (const name of fullNames) {
+    const key = collisionKey(firstName(name));
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  const result = new Map<string, string>();
+  for (const name of fullNames) {
+    const first = firstName(name);
+    const key = collisionKey(first);
+    result.set(name, (counts.get(key) ?? 0) > 1 ? `${first} ${lastInitial(name)}.` : first);
+  }
+  return result;
+}
+
+// Returns couple id -> "First & First", collision-checked within this
+// specific list of couples (so it stays correct per-season as the couples
+// pool passed in changes).
+export function buildCoupleDisplayNames<
+  T extends { id: string; celebrity_name: string; pro_name: string },
+>(couples: T[]): Map<string, string> {
+  const celebMap = buildFirstNameMap(couples.map((c) => c.celebrity_name));
+  const proMap = buildFirstNameMap(couples.map((c) => c.pro_name));
+
+  const result = new Map<string, string>();
+  for (const c of couples) {
+    result.set(c.id, `${celebMap.get(c.celebrity_name)} & ${proMap.get(c.pro_name)}`);
+  }
+  return result;
+}

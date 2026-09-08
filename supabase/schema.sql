@@ -26,6 +26,43 @@ create table profiles (
 );
 
 -- ============================================================
+-- Seasons
+-- Leagues themselves are NOT season-scoped yet (a new league per year, for
+-- now) — this just lets couples/episodes carry history across years instead
+-- of every new season overwriting the last one. couples/episode-counting
+-- logic (draft totals, the waiver wire, results-entry pickers) all need to
+-- filter to the active season via active_season_id() below, or a second
+-- season's rows would silently corrupt the first season's in-progress data.
+-- ============================================================
+
+create table seasons (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  is_active boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create unique index seasons_one_active on seasons (is_active) where is_active;
+
+grant select on public.seasons to authenticated;
+create policy "seasons are viewable by all authenticated users"
+on public.seasons for select
+using (true);
+
+create function public.active_season_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select id from public.seasons where is_active limit 1;
+$$;
+
+revoke execute on function public.active_season_id() from public;
+grant execute on function public.active_season_id() to authenticated;
+
+-- ============================================================
 -- Leagues
 -- ============================================================
 
@@ -40,6 +77,11 @@ create table leagues (
   draft_scheduled_at timestamptz,
   pick_time_limit_seconds int not null default 90,
   draft_status text not null default 'not_started' check (draft_status in ('not_started', 'in_progress', 'completed')),
+  -- How long before an episode's real-world airs_at this league's Pick 'Em
+  -- predictions close. Deliberately a per-league lead time, not a per-league
+  -- absolute lock timestamp: every league locks relative to the same real
+  -- air time, they just get to choose how much buffer they want.
+  prediction_lock_hours_before_air numeric not null default 0 check (prediction_lock_hours_before_air >= 0),
   created_at timestamptz not null default now(),
 
   constraint waiver_method_required check (
@@ -74,15 +116,28 @@ create table scoring_settings (
 -- Couples (global for the active season)
 -- ============================================================
 
+-- Pros return year after year with different partners; celebrities occasionally
+-- do too (All-Stars-style seasons). Both are "people" with a role, not fields
+-- baked into couples — so the same pro across multiple seasons is the same
+-- row here, not free text repeated (and potentially misspelled) each time.
+create table people (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  role text not null check (role in ('celebrity', 'pro')),
+  photo_url text,
+  created_at timestamptz not null default now(),
+  unique (name, role)
+);
+
 create table couples (
   id uuid primary key default gen_random_uuid(),
-  celebrity_name text not null,
-  pro_name text not null,
-  celebrity_photo_url text,
-  pro_photo_url text,
+  season_id uuid not null references seasons(id),
+  celebrity_id uuid not null references people(id),
+  pro_id uuid not null references people(id),
   status text not null default 'active' check (status in ('active', 'eliminated', 'winner', 'runner_up', 'third_place')),
   elimination_week int,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (season_id, celebrity_id, pro_id)
 );
 
 -- ============================================================
@@ -137,12 +192,13 @@ create table waiver_claims (
 
 create table episodes (
   id uuid primary key default gen_random_uuid(),
-  week_number int not null unique,
-  air_date date not null,
-  locks_at timestamptz not null, -- Tuesday showtime prediction lock
+  season_id uuid not null references seasons(id),
+  week_number int not null, -- resets to 1 each season, so unique per-season below, not globally
+  airs_at timestamptz not null, -- actual real-world air date/time; set per episode, not assumed weekly-regular
   is_elimination_week boolean not null default true,
   is_finale boolean not null default false,
-  status text not null default 'upcoming' check (status in ('upcoming', 'locked', 'completed'))
+  status text not null default 'upcoming' check (status in ('upcoming', 'locked', 'completed')),
+  unique (season_id, week_number)
 );
 
 -- One row per couple per dance, so multi-dance weeks (finals, team dances) just add rows.
@@ -398,7 +454,8 @@ create function public.update_league_settings(
   p_league_id uuid,
   p_waiver_mode text,
   p_waiver_claim_method text,
-  p_pick_time_limit_seconds int
+  p_pick_time_limit_seconds int,
+  p_prediction_lock_hours_before_air numeric
 )
 returns public.leagues
 language plpgsql
@@ -411,7 +468,8 @@ begin
   set
     waiver_mode = p_waiver_mode,
     waiver_claim_method = p_waiver_claim_method,
-    pick_time_limit_seconds = p_pick_time_limit_seconds
+    pick_time_limit_seconds = p_pick_time_limit_seconds,
+    prediction_lock_hours_before_air = p_prediction_lock_hours_before_air
   where id = p_league_id and commissioner_id = auth.uid()
   returning * into v_league;
 
@@ -464,9 +522,9 @@ begin
 end;
 $$;
 
-revoke execute on function public.update_league_settings(uuid, text, text, int) from public;
+revoke execute on function public.update_league_settings(uuid, text, text, int, numeric) from public;
 revoke execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
-grant execute on function public.update_league_settings(uuid, text, text, int) to authenticated;
+grant execute on function public.update_league_settings(uuid, text, text, int, numeric) to authenticated;
 grant execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to authenticated;
 
 -- ============================================================
@@ -478,6 +536,12 @@ grant execute on function public.update_scoring_settings(uuid, numeric, numeric,
 -- every call (under a row lock on the league, to close the race between two
 -- simultaneous picks).
 -- ============================================================
+
+grant select on public.people to authenticated;
+
+create policy "people are viewable by all authenticated users"
+on public.people for select
+using (true);
 
 grant select on public.couples to authenticated;
 
@@ -577,7 +641,9 @@ begin
     raise exception 'Draft order has not been set for all members yet';
   end if;
 
-  select count(*) into v_couple_count from public.couples;
+  select count(*) into v_couple_count
+  from public.couples
+  where season_id = public.active_season_id();
   if v_member_count > v_couple_count then
     raise exception 'Not enough couples for every member to get at least one';
   end if;
@@ -649,6 +715,12 @@ begin
     raise exception 'It is not your turn to pick';
   end if;
 
+  if not exists (
+    select 1 from public.couples where id = p_couple_id and season_id = public.active_season_id()
+  ) then
+    raise exception 'That couple is not part of the current season';
+  end if;
+
   if exists (select 1 from public.draft_picks where league_id = p_league_id and couple_id = p_couple_id) then
     raise exception 'That couple has already been drafted';
   end if;
@@ -688,8 +760,10 @@ alter publication supabase_realtime add table public.draft_picks;
 -- status, weekly_manager_scores) is NOT exposed via RLS/grants at all —
 -- results entry is a cross-league admin operation (one submission recomputes
 -- scores for every league that has relevant rosters/predictions), so it runs
--- server-side via the service_role key after checking profiles.is_super_admin
--- in application code, rather than through a SECURITY DEFINER function.
+-- server-side via the service_role key after an authorization check in
+-- application code (profiles.is_super_admin, or the RESULTS_ENTRY_OPEN_TO_ALL
+-- env toggle — see src/lib/results.ts), rather than through a SECURITY
+-- DEFINER function.
 -- ============================================================
 
 grant select on public.episodes to authenticated;
@@ -724,16 +798,32 @@ using (public.is_league_member(league_id));
 
 grant select on public.predictions to authenticated;
 
+-- Each league locks relative to the same real airs_at, just with its own
+-- configurable lead time (leagues.prediction_lock_hours_before_air) — so the
+-- lock moment isn't a single column anywhere, it's computed. Shared by the
+-- RLS policy below and submit_prediction so the two can't drift apart.
+create function public.prediction_lock_at(p_league_id uuid, p_episode_id uuid)
+returns timestamptz
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select e.airs_at - (l.prediction_lock_hours_before_air * interval '1 hour')
+  from public.episodes e, public.leagues l
+  where e.id = p_episode_id and l.id = p_league_id;
+$$;
+
+revoke execute on function public.prediction_lock_at(uuid, uuid) from public;
+grant execute on function public.prediction_lock_at(uuid, uuid) to authenticated;
+
 create policy "predictions visible to owner pre-lock, league post-lock"
 on public.predictions for select
 using (
   public.is_league_member(league_id)
   and (
     auth.uid() = manager_id
-    or exists (
-      select 1 from public.episodes e
-      where e.id = predictions.episode_id and now() >= e.locks_at
-    )
+    or now() >= public.prediction_lock_at(league_id, episode_id)
   )
 );
 
@@ -748,19 +838,20 @@ language plpgsql
 security definer set search_path = ''
 as $$
 declare
-  v_locks_at timestamptz;
+  v_lock_at timestamptz;
   v_prediction public.predictions;
 begin
   if not public.is_league_member(p_league_id) then
     raise exception 'You are not a member of this league';
   end if;
 
-  select locks_at into v_locks_at from public.episodes where id = p_episode_id;
-  if not found then
+  if not exists (select 1 from public.episodes where id = p_episode_id) then
     raise exception 'Episode not found';
   end if;
 
-  if now() >= v_locks_at then
+  v_lock_at := public.prediction_lock_at(p_league_id, p_episode_id);
+
+  if now() >= v_lock_at then
     raise exception 'Predictions are locked for this episode';
   end if;
 
@@ -898,7 +989,10 @@ begin
     raise exception 'That slot is not open for a waiver claim';
   end if;
 
-  if not exists (select 1 from public.couples where id = p_couple_id and status = 'active') then
+  if not exists (
+    select 1 from public.couples
+    where id = p_couple_id and status = 'active' and season_id = public.active_season_id()
+  ) then
     raise exception 'That couple is not available';
   end if;
 

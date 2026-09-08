@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-type RosterCouple = { celebrityName: string; proName: string; status: string };
+type RosterCouple = { displayName: string; status: string };
 
 export function RosterCard({
   couples,
@@ -18,9 +18,7 @@ export function RosterCard({
       <CardContent className="flex flex-col gap-2">
         {couples.map((c, i) => (
           <div key={i} className="flex items-center justify-between text-sm">
-            <span>
-              {c.celebrityName} &amp; {c.proName}
-            </span>
+            <span>{c.displayName}</span>
             <span
               className={
                 c.status === "eliminated" ? "text-muted-foreground" : "text-foreground"

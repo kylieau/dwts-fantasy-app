@@ -127,6 +127,21 @@ export default async function LeagueSettingsPage({
               />
             </div>
 
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="predictionLockHoursBeforeAir">
+                Pick &apos;Em lock (hours before air)
+              </Label>
+              <Input
+                id="predictionLockHoursBeforeAir"
+                name="predictionLockHoursBeforeAir"
+                type="number"
+                step="0.5"
+                min={0}
+                defaultValue={league.prediction_lock_hours_before_air}
+                required
+              />
+            </div>
+
             <Button type="submit">Save league settings</Button>
           </form>
         </CardContent>

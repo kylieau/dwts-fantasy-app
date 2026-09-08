@@ -16,36 +16,55 @@ export type Database = {
     Tables: {
       couples: {
         Row: {
-          celebrity_name: string
-          celebrity_photo_url: string | null
+          celebrity_id: string
           created_at: string
           elimination_week: number | null
           id: string
-          pro_name: string
-          pro_photo_url: string | null
+          pro_id: string
+          season_id: string
           status: string
         }
         Insert: {
-          celebrity_name: string
-          celebrity_photo_url?: string | null
+          celebrity_id: string
           created_at?: string
           elimination_week?: number | null
           id?: string
-          pro_name: string
-          pro_photo_url?: string | null
+          pro_id: string
+          season_id: string
           status?: string
         }
         Update: {
-          celebrity_name?: string
-          celebrity_photo_url?: string | null
+          celebrity_id?: string
           created_at?: string
           elimination_week?: number | null
           id?: string
-          pro_name?: string
-          pro_photo_url?: string | null
+          pro_id?: string
+          season_id?: string
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "couples_celebrity_id_fkey"
+            columns: ["celebrity_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couples_pro_id_fkey"
+            columns: ["pro_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couples_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dance_scores: {
         Row: {
@@ -188,33 +207,41 @@ export type Database = {
       }
       episodes: {
         Row: {
-          air_date: string
+          airs_at: string
           id: string
           is_elimination_week: boolean
           is_finale: boolean
-          locks_at: string
+          season_id: string
           status: string
           week_number: number
         }
         Insert: {
-          air_date: string
+          airs_at: string
           id?: string
           is_elimination_week?: boolean
           is_finale?: boolean
-          locks_at: string
+          season_id: string
           status?: string
           week_number: number
         }
         Update: {
-          air_date?: string
+          airs_at?: string
           id?: string
           is_elimination_week?: boolean
           is_finale?: boolean
-          locks_at?: string
+          season_id?: string
           status?: string
           week_number?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "episodes_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       league_members: {
         Row: {
@@ -268,6 +295,7 @@ export type Database = {
           invite_code: string
           name: string
           pick_time_limit_seconds: number
+          prediction_lock_hours_before_air: number
           roster_size: number
           waiver_claim_method: string | null
           waiver_mode: string
@@ -281,6 +309,7 @@ export type Database = {
           invite_code: string
           name: string
           pick_time_limit_seconds?: number
+          prediction_lock_hours_before_air?: number
           roster_size?: number
           waiver_claim_method?: string | null
           waiver_mode?: string
@@ -294,6 +323,7 @@ export type Database = {
           invite_code?: string
           name?: string
           pick_time_limit_seconds?: number
+          prediction_lock_hours_before_air?: number
           roster_size?: number
           waiver_claim_method?: string | null
           waiver_mode?: string
@@ -307,6 +337,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      people: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          photo_url: string | null
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          photo_url?: string | null
+          role: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          photo_url?: string | null
+          role?: string
+        }
+        Relationships: []
       }
       predictions: {
         Row: {
@@ -494,6 +548,27 @@ export type Database = {
           },
         ]
       }
+      seasons: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       waiver_claims: {
         Row: {
           couple_id: string
@@ -615,6 +690,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      active_season_id: { Args: never; Returns: string }
       approve_waiver_claim: {
         Args: { p_claim_id: string }
         Returns: {
@@ -647,6 +723,7 @@ export type Database = {
           invite_code: string
           name: string
           pick_time_limit_seconds: number
+          prediction_lock_hours_before_air: number
           roster_size: number
           waiver_claim_method: string | null
           waiver_mode: string
@@ -691,6 +768,7 @@ export type Database = {
           invite_code: string
           name: string
           pick_time_limit_seconds: number
+          prediction_lock_hours_before_air: number
           roster_size: number
           waiver_claim_method: string | null
           waiver_mode: string
@@ -719,6 +797,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      prediction_lock_at: {
+        Args: { p_episode_id: string; p_league_id: string }
+        Returns: string
       }
       process_reverse_standings_waivers: {
         Args: { p_league_id: string }
@@ -760,6 +842,7 @@ export type Database = {
           invite_code: string
           name: string
           pick_time_limit_seconds: number
+          prediction_lock_hours_before_air: number
           roster_size: number
           waiver_claim_method: string | null
           waiver_mode: string
@@ -823,6 +906,7 @@ export type Database = {
         Args: {
           p_league_id: string
           p_pick_time_limit_seconds: number
+          p_prediction_lock_hours_before_air: number
           p_waiver_claim_method: string
           p_waiver_mode: string
         }
@@ -835,6 +919,7 @@ export type Database = {
           invite_code: string
           name: string
           pick_time_limit_seconds: number
+          prediction_lock_hours_before_air: number
           roster_size: number
           waiver_claim_method: string | null
           waiver_mode: string

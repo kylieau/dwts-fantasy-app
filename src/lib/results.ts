@@ -14,37 +14,51 @@ export type EntrySubmission = {
 
 export type EpisodeResultsInput = {
   weekNumber: number;
-  airDate: string;
-  locksAt: string;
+  airsAt: string;
   isEliminationWeek: boolean;
   isFinale: boolean;
   entries: EntrySubmission[];
 };
 
+// While the league is small, results entry is opened to every signed-in user
+// (RESULTS_ENTRY_OPEN_TO_ALL=true) rather than gated behind is_super_admin, so
+// no single person is stuck updating scores every week. Flip the env var off
+// once that trust assumption stops holding.
+export function resultsEntryOpenToAll(): boolean {
+  return process.env.RESULTS_ENTRY_OPEN_TO_ALL === "true";
+}
+
 // Takes an already-authorized admin (service-role) client — the caller is
-// responsible for verifying profiles.is_super_admin first. Kept separate from
-// the 'use server' action so it can be exercised directly in tests without a
-// Next.js request context.
+// responsible for verifying access (profiles.is_super_admin or
+// resultsEntryOpenToAll()) first. Kept separate from the 'use server' action
+// so it can be exercised directly in tests without a Next.js request context.
 export async function applyEpisodeResults(
   admin: SupabaseClient<Database>,
   input: EpisodeResultsInput
 ): Promise<{ error: string | null }> {
+  const { data: season, error: seasonErr } = await admin
+    .from("seasons")
+    .select("id")
+    .eq("is_active", true)
+    .single();
+  if (seasonErr || !season) return { error: seasonErr?.message ?? "No active season" };
+
   const { data: episode, error: episodeErr } = await admin
     .from("episodes")
     .upsert(
       {
+        season_id: season.id,
         week_number: input.weekNumber,
-        air_date: input.airDate,
-        locks_at: input.locksAt,
+        airs_at: input.airsAt,
         is_elimination_week: input.isEliminationWeek,
         is_finale: input.isFinale,
         // Submitting with no couple entries just schedules the episode (sets
-        // its lock time) ahead of air — that's how a manager gets something
-        // to predict against before results exist. Adding entries later
-        // flips it to completed.
+        // its air/lock time) ahead of air — that's how a manager gets
+        // something to predict against before results exist. Adding entries
+        // later flips it to completed.
         status: input.entries.length > 0 ? "completed" : "upcoming",
       },
-      { onConflict: "week_number" }
+      { onConflict: "season_id,week_number" }
     )
     .select()
     .single();

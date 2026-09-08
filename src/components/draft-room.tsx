@@ -35,12 +35,14 @@ export function DraftRoom({
   league: initialLeague,
   members: initialMembers,
   couples,
+  coupleDisplayNames,
   initialPicks,
   currentUserId,
 }: {
   league: League;
   members: Member[];
   couples: Couple[];
+  coupleDisplayNames: Record<string, string>;
   initialPicks: DraftPick[];
   currentUserId: string;
 }) {
@@ -133,8 +135,7 @@ export function DraftRoom({
   const isCommissioner = league.commissioner_id === currentUserId;
 
   function coupleLabel(coupleId: string) {
-    const c = couples.find((c) => c.id === coupleId);
-    return c ? `${c.celebrity_name} & ${c.pro_name}` : "Unknown couple";
+    return coupleDisplayNames[coupleId] ?? "Unknown couple";
   }
 
   function managerLabel(userId: string) {
@@ -301,7 +302,7 @@ export function DraftRoom({
                 disabled={!isMyTurn || pendingCoupleId !== null}
                 onClick={() => handlePick(c.id)}
               >
-                {c.celebrity_name} &amp; {c.pro_name}
+                {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
               </Button>
             ))}
           </CardContent>

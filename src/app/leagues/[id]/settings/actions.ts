@@ -17,6 +17,7 @@ export async function updateLeagueSettings(leagueId: string, formData: FormData)
     // NULL (required when waiver_mode is "locked"); the DB happily allows it.
     p_waiver_claim_method: (waiverMode === "waivers" ? rawClaimMethod : null) as string,
     p_pick_time_limit_seconds: Number(formData.get("pickTimeLimitSeconds")),
+    p_prediction_lock_hours_before_air: Number(formData.get("predictionLockHoursBeforeAir")),
   });
 
   if (error) {

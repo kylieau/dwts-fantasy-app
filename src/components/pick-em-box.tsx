@@ -23,14 +23,18 @@ type Couple = { id: string; celebrity_name: string; pro_name: string };
 export function PickEmBox({
   leagueId,
   episode,
+  lockAt,
   activeCouples,
+  coupleDisplayNames,
   existingPrediction,
   isLocked,
   revealedPredictions,
 }: {
   leagueId: string;
-  episode: { id: string; week_number: number; locks_at: string } | null;
+  episode: { id: string; week_number: number } | null;
+  lockAt: string | null;
   activeCouples: Couple[];
+  coupleDisplayNames: Record<string, string>;
   existingPrediction: {
     predicted_eliminated_couple_id: string | null;
     predicted_top_scorer_couple_id: string | null;
@@ -85,7 +89,9 @@ export function PickEmBox({
         <CardDescription>
           {isLocked
             ? "Predictions are locked for this episode."
-            : `Locks at ${new Date(episode.locks_at).toLocaleString()}`}
+            : lockAt
+              ? `Locks at ${new Date(lockAt).toLocaleString()}`
+              : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -103,7 +109,7 @@ export function PickEmBox({
                 <SelectContent>
                   {activeCouples.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.celebrity_name} &amp; {c.pro_name}
+                      {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -118,7 +124,7 @@ export function PickEmBox({
                 <SelectContent>
                   {activeCouples.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.celebrity_name} &amp; {c.pro_name}
+                      {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
                     </SelectItem>
                   ))}
                 </SelectContent>

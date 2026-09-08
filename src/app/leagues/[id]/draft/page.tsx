@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DraftRoom } from "@/components/draft-room";
+import { buildCoupleDisplayNames } from "@/lib/couple-display";
 
 export default async function DraftPage({
   params,
@@ -28,6 +29,8 @@ export default async function DraftPage({
     notFound();
   }
 
+  const { data: activeSeasonId } = await supabase.rpc("active_season_id");
+
   const [{ data: members }, { data: couples }, { data: picks }] = await Promise.all([
     supabase
       .from("league_members")
@@ -36,8 +39,10 @@ export default async function DraftPage({
       .order("draft_position"),
     supabase
       .from("couples")
-      .select("id, celebrity_name, pro_name")
-      .order("celebrity_name"),
+      .select(
+        "id, celebrity:people!couples_celebrity_id_fkey(name), pro:people!couples_pro_id_fkey(name)"
+      )
+      .eq("season_id", activeSeasonId ?? ""),
     supabase
       .from("draft_picks")
       .select("id, couple_id, manager_id, round, pick_number, picked_at")
@@ -45,11 +50,22 @@ export default async function DraftPage({
       .order("pick_number"),
   ]);
 
+  const flatCouples = (couples ?? [])
+    .map((c) => ({
+      id: c.id,
+      celebrity_name: c.celebrity?.name ?? "Unknown",
+      pro_name: c.pro?.name ?? "Unknown",
+    }))
+    .sort((a, b) => a.celebrity_name.localeCompare(b.celebrity_name));
+
+  const coupleDisplayNames = Object.fromEntries(buildCoupleDisplayNames(flatCouples));
+
   return (
     <DraftRoom
       league={league}
       members={members ?? []}
-      couples={couples ?? []}
+      couples={flatCouples}
+      coupleDisplayNames={coupleDisplayNames}
       initialPicks={picks ?? []}
       currentUserId={user.id}
     />

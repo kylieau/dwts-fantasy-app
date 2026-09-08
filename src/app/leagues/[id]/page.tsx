@@ -12,6 +12,7 @@ import {
 import { StandingsTable } from "@/components/standings-table";
 import { RosterCard } from "@/components/roster-card";
 import { PickEmBox } from "@/components/pick-em-box";
+import { buildCoupleDisplayNames } from "@/lib/couple-display";
 
 export default async function LeaguePage({
   params,
@@ -52,18 +53,26 @@ export default async function LeaguePage({
       supabase.from("weekly_manager_scores").select("manager_id, total_points").eq("league_id", id),
       supabase
         .from("roster_slots")
-        .select("couple_id, couples(celebrity_name, pro_name, status)")
+        .select(
+          "couple_id, couples(status, celebrity:people!couples_celebrity_id_fkey(name), pro:people!couples_pro_id_fkey(name))"
+        )
         .eq("league_id", id)
         .eq("manager_id", user.id),
-      supabase.from("couples").select("id, celebrity_name, pro_name, status").order("celebrity_name"),
+      supabase
+        .from("couples")
+        .select(
+          "id, status, season_id, celebrity:people!couples_celebrity_id_fkey(name), pro:people!couples_pro_id_fkey(name)"
+        ),
       supabase
         .from("episodes")
-        .select("id, week_number, locks_at")
+        .select("id, week_number, airs_at")
         .eq("status", "upcoming")
         .order("week_number", { ascending: true })
         .limit(1)
         .maybeSingle(),
     ]);
+
+  const { data: activeSeasonId } = await supabase.rpc("active_season_id");
 
   const pointsByManager = new Map<string, number>();
   for (const row of allScores ?? []) {
@@ -76,17 +85,37 @@ export default async function LeaguePage({
     totalPoints: pointsByManager.get(m.user_id) ?? 0,
   }));
 
-  const couplesById = new Map((allCouples ?? []).map((c) => [c.id, c]));
-  const activeCouples = (allCouples ?? []).filter((c) => c.status === "active");
+  const flatCouples = (allCouples ?? []).map((c) => ({
+    id: c.id,
+    status: c.status,
+    season_id: c.season_id,
+    celebrity_name: c.celebrity?.name ?? "Unknown",
+    pro_name: c.pro?.name ?? "Unknown",
+  }));
+
+  const activeCouples = flatCouples.filter(
+    (c) => c.status === "active" && c.season_id === activeSeasonId
+  );
+  // Historical lookups (roster, revealed predictions) span every couple this
+  // league has ever touched; the Pick 'Em picker is scoped to just the couples
+  // actually offered, so collisions are checked against that pool specifically.
+  const allDisplayNames = buildCoupleDisplayNames(flatCouples);
+  const activeDisplayNames = buildCoupleDisplayNames(activeCouples);
 
   let isLocked = false;
+  let lockAt: string | null = null;
   let ownPrediction = null;
   let revealedPredictions:
     | { displayName: string; eliminatedLabel: string | null; topScorerLabel: string | null }[]
     | undefined;
 
   if (upcomingEpisode) {
-    isLocked = new Date() >= new Date(upcomingEpisode.locks_at);
+    const { data: computedLockAt } = await supabase.rpc("prediction_lock_at", {
+      p_league_id: id,
+      p_episode_id: upcomingEpisode.id,
+    });
+    lockAt = computedLockAt;
+    isLocked = !!lockAt && new Date() >= new Date(lockAt);
 
     const { data } = await supabase
       .from("predictions")
@@ -108,10 +137,10 @@ export default async function LeaguePage({
       revealedPredictions = (allPredictions ?? []).map((p) => ({
         displayName: nameByManager.get(p.manager_id) ?? "Unknown",
         eliminatedLabel: p.predicted_eliminated_couple_id
-          ? `${couplesById.get(p.predicted_eliminated_couple_id)?.celebrity_name}`
+          ? (allDisplayNames.get(p.predicted_eliminated_couple_id) ?? null)
           : null,
         topScorerLabel: p.predicted_top_scorer_couple_id
-          ? `${couplesById.get(p.predicted_top_scorer_couple_id)?.celebrity_name}`
+          ? (allDisplayNames.get(p.predicted_top_scorer_couple_id) ?? null)
           : null,
       }));
     }
@@ -150,7 +179,9 @@ export default async function LeaguePage({
       <PickEmBox
         leagueId={id}
         episode={upcomingEpisode ?? null}
+        lockAt={lockAt}
         activeCouples={activeCouples}
+        coupleDisplayNames={Object.fromEntries(activeDisplayNames)}
         existingPrediction={ownPrediction}
         isLocked={isLocked}
         revealedPredictions={revealedPredictions}
@@ -163,8 +194,9 @@ export default async function LeaguePage({
           couples={rosterSlots
             .filter((r) => r.couples)
             .map((r) => ({
-              celebrityName: r.couples!.celebrity_name,
-              proName: r.couples!.pro_name,
+              displayName:
+                allDisplayNames.get(r.couple_id!) ??
+                `${r.couples!.celebrity?.name} & ${r.couples!.pro?.name}`,
               status: r.couples!.status,
             }))}
           totalPoints={pointsByManager.get(user.id) ?? 0}

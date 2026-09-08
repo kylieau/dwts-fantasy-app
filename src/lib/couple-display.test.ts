@@ -1,0 +1,54 @@
+import { describe, expect, it } from "vitest";
+import { buildCoupleDisplayNames } from "./couple-display";
+
+describe("buildCoupleDisplayNames", () => {
+  it("shows first name only when there's no collision", () => {
+    const couples = [
+      { id: "1", celebrity_name: "Tatyana Ali", pro_name: "Jan Ravnik" },
+      { id: "2", celebrity_name: "Tyler Cameron", pro_name: "Sharna Burgess" },
+    ];
+    const names = buildCoupleDisplayNames(couples);
+    expect(names.get("1")).toBe("Tatyana & Jan");
+    expect(names.get("2")).toBe("Tyler & Sharna");
+  });
+
+  it("disambiguates Connor/Conner with a last initial despite different spelling", () => {
+    const couples = [
+      { id: "1", celebrity_name: "Conner Leavitt", pro_name: "Adele Zaikman" },
+      { id: "2", celebrity_name: "Connor Wood", pro_name: "Rylee Arnold" },
+    ];
+    const names = buildCoupleDisplayNames(couples);
+    expect(names.get("1")).toBe("Conner L. & Adele");
+    expect(names.get("2")).toBe("Connor W. & Rylee");
+  });
+
+  it("keeps a known compound first name together instead of splitting on whitespace", () => {
+    const couples = [
+      { id: "1", celebrity_name: "Sarah Jane Nader", pro_name: "Hailey Bills" },
+    ];
+    const names = buildCoupleDisplayNames(couples);
+    expect(names.get("1")).toBe("Sarah Jane & Hailey");
+  });
+
+  it("disambiguates an exact first-name collision", () => {
+    const couples = [
+      { id: "1", celebrity_name: "Jordan Smith", pro_name: "Alan Bersten" },
+      { id: "2", celebrity_name: "Jordan Chiles", pro_name: "Val Chmerkovskiy" },
+    ];
+    const names = buildCoupleDisplayNames(couples);
+    expect(names.get("1")).toBe("Jordan S. & Alan");
+    expect(names.get("2")).toBe("Jordan C. & Val");
+  });
+
+  it("checks celebrity and pro pools independently", () => {
+    // Two celebrities share a first name, but the pros don't collide with
+    // anyone — pros should stay first-name-only.
+    const couples = [
+      { id: "1", celebrity_name: "Alex Smith", pro_name: "Witney Carson" },
+      { id: "2", celebrity_name: "Alex Jones", pro_name: "Emma Slater" },
+    ];
+    const names = buildCoupleDisplayNames(couples);
+    expect(names.get("1")).toBe("Alex S. & Witney");
+    expect(names.get("2")).toBe("Alex J. & Emma");
+  });
+});
