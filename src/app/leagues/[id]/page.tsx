@@ -9,6 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { StandingsTable } from "@/components/standings-table";
+import { RosterCard } from "@/components/roster-card";
+import { PickEmBox } from "@/components/pick-em-box";
 
 export default async function LeaguePage({
   params,
@@ -39,11 +42,80 @@ export default async function LeaguePage({
     notFound();
   }
 
-  const { data: members } = await supabase
-    .from("league_members")
-    .select("role, joined_at, profiles(display_name)")
-    .eq("league_id", id)
-    .order("joined_at");
+  const [{ data: members }, { data: allScores }, { data: rosterSlots }, { data: allCouples }, { data: upcomingEpisode }] =
+    await Promise.all([
+      supabase
+        .from("league_members")
+        .select("user_id, role, joined_at, profiles(display_name)")
+        .eq("league_id", id)
+        .order("joined_at"),
+      supabase.from("weekly_manager_scores").select("manager_id, total_points").eq("league_id", id),
+      supabase
+        .from("roster_slots")
+        .select("couple_id, couples(celebrity_name, pro_name, status)")
+        .eq("league_id", id)
+        .eq("manager_id", user.id),
+      supabase.from("couples").select("id, celebrity_name, pro_name, status").order("celebrity_name"),
+      supabase
+        .from("episodes")
+        .select("id, week_number, locks_at")
+        .eq("status", "upcoming")
+        .order("week_number", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  const pointsByManager = new Map<string, number>();
+  for (const row of allScores ?? []) {
+    pointsByManager.set(row.manager_id, (pointsByManager.get(row.manager_id) ?? 0) + row.total_points);
+  }
+
+  const standings = (members ?? []).map((m) => ({
+    managerId: m.user_id,
+    displayName: m.profiles?.display_name ?? "Unknown",
+    totalPoints: pointsByManager.get(m.user_id) ?? 0,
+  }));
+
+  const couplesById = new Map((allCouples ?? []).map((c) => [c.id, c]));
+  const activeCouples = (allCouples ?? []).filter((c) => c.status === "active");
+
+  let isLocked = false;
+  let ownPrediction = null;
+  let revealedPredictions:
+    | { displayName: string; eliminatedLabel: string | null; topScorerLabel: string | null }[]
+    | undefined;
+
+  if (upcomingEpisode) {
+    isLocked = new Date() >= new Date(upcomingEpisode.locks_at);
+
+    const { data } = await supabase
+      .from("predictions")
+      .select("predicted_eliminated_couple_id, predicted_top_scorer_couple_id")
+      .eq("league_id", id)
+      .eq("episode_id", upcomingEpisode.id)
+      .eq("manager_id", user.id)
+      .maybeSingle();
+    ownPrediction = data;
+
+    if (isLocked) {
+      const { data: allPredictions } = await supabase
+        .from("predictions")
+        .select("manager_id, predicted_eliminated_couple_id, predicted_top_scorer_couple_id")
+        .eq("league_id", id)
+        .eq("episode_id", upcomingEpisode.id);
+
+      const nameByManager = new Map((members ?? []).map((m) => [m.user_id, m.profiles?.display_name ?? "Unknown"]));
+      revealedPredictions = (allPredictions ?? []).map((p) => ({
+        displayName: nameByManager.get(p.manager_id) ?? "Unknown",
+        eliminatedLabel: p.predicted_eliminated_couple_id
+          ? `${couplesById.get(p.predicted_eliminated_couple_id)?.celebrity_name}`
+          : null,
+        topScorerLabel: p.predicted_top_scorer_couple_id
+          ? `${couplesById.get(p.predicted_top_scorer_couple_id)?.celebrity_name}`
+          : null,
+      }));
+    }
+  }
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-12">
@@ -69,6 +141,30 @@ export default async function LeaguePage({
           )}
         </div>
       </div>
+
+      <PickEmBox
+        leagueId={id}
+        episode={upcomingEpisode ?? null}
+        activeCouples={activeCouples}
+        existingPrediction={ownPrediction}
+        isLocked={isLocked}
+        revealedPredictions={revealedPredictions}
+      />
+
+      <StandingsTable standings={standings} />
+
+      {rosterSlots && rosterSlots.length > 0 && (
+        <RosterCard
+          couples={rosterSlots
+            .filter((r) => r.couples)
+            .map((r) => ({
+              celebrityName: r.couples!.celebrity_name,
+              proName: r.couples!.pro_name,
+              status: r.couples!.status,
+            }))}
+          totalPoints={pointsByManager.get(user.id) ?? 0}
+        />
+      )}
 
       <Card>
         <CardHeader>

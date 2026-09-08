@@ -38,7 +38,11 @@ export async function applyEpisodeResults(
         locks_at: input.locksAt,
         is_elimination_week: input.isEliminationWeek,
         is_finale: input.isFinale,
-        status: "completed",
+        // Submitting with no couple entries just schedules the episode (sets
+        // its lock time) ahead of air — that's how a manager gets something
+        // to predict against before results exist. Adding entries later
+        // flips it to completed.
+        status: input.entries.length > 0 ? "completed" : "upcoming",
       },
       { onConflict: "week_number" }
     )

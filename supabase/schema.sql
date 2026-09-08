@@ -700,3 +700,76 @@ grant select on public.weekly_manager_scores to authenticated;
 create policy "weekly manager scores are viewable by league members"
 on public.weekly_manager_scores for select
 using (public.is_league_member(league_id));
+
+-- ============================================================
+-- Weekly Pick 'Em: submitting/updating a prediction is a SECURITY DEFINER
+-- function (same shape as make_draft_pick) so the lock deadline is enforced
+-- server-side, not just hidden in the UI. Reads are more specific than the
+-- usual "viewable by league members" pattern: a manager's own pick is only
+-- visible to them until the episode locks, then it's visible league-wide —
+-- otherwise seeing a league-mate's elimination pick before lock would let you
+-- just copy their guess.
+-- ============================================================
+
+grant select on public.predictions to authenticated;
+
+create policy "predictions visible to owner pre-lock, league post-lock"
+on public.predictions for select
+using (
+  public.is_league_member(league_id)
+  and (
+    auth.uid() = manager_id
+    or exists (
+      select 1 from public.episodes e
+      where e.id = predictions.episode_id and now() >= e.locks_at
+    )
+  )
+);
+
+create function public.submit_prediction(
+  p_league_id uuid,
+  p_episode_id uuid,
+  p_predicted_eliminated_couple_id uuid,
+  p_predicted_top_scorer_couple_id uuid
+)
+returns public.predictions
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_locks_at timestamptz;
+  v_prediction public.predictions;
+begin
+  if not public.is_league_member(p_league_id) then
+    raise exception 'You are not a member of this league';
+  end if;
+
+  select locks_at into v_locks_at from public.episodes where id = p_episode_id;
+  if not found then
+    raise exception 'Episode not found';
+  end if;
+
+  if now() >= v_locks_at then
+    raise exception 'Predictions are locked for this episode';
+  end if;
+
+  insert into public.predictions (
+    league_id, manager_id, episode_id,
+    predicted_eliminated_couple_id, predicted_top_scorer_couple_id
+  )
+  values (
+    p_league_id, auth.uid(), p_episode_id,
+    p_predicted_eliminated_couple_id, p_predicted_top_scorer_couple_id
+  )
+  on conflict (league_id, manager_id, episode_id) do update set
+    predicted_eliminated_couple_id = excluded.predicted_eliminated_couple_id,
+    predicted_top_scorer_couple_id = excluded.predicted_top_scorer_couple_id,
+    submitted_at = now()
+  returning * into v_prediction;
+
+  return v_prediction;
+end;
+$$;
+
+revoke execute on function public.submit_prediction(uuid, uuid, uuid, uuid) from public;
+grant execute on function public.submit_prediction(uuid, uuid, uuid, uuid) to authenticated;

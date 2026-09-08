@@ -88,6 +88,10 @@ export function ResultsForm({ couples }: { couples: Couple[] }) {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Enter episode results</h1>
+      <p className="text-sm text-muted-foreground">
+        Leave every couple&apos;s scores blank to just schedule the episode
+        (set its lock time) ahead of air, without entering results yet.
+      </p>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {success && (
         <p className="text-sm text-muted-foreground">

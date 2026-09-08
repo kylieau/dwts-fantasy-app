@@ -704,6 +704,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      submit_prediction: {
+        Args: {
+          p_episode_id: string
+          p_league_id: string
+          p_predicted_eliminated_couple_id: string
+          p_predicted_top_scorer_couple_id: string
+        }
+        Returns: {
+          episode_id: string
+          id: string
+          league_id: string
+          manager_id: string
+          predicted_eliminated_couple_id: string | null
+          predicted_top_scorer_couple_id: string | null
+          submitted_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "predictions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_league_settings: {
         Args: {
           p_league_id: string

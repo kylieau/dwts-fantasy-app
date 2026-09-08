@@ -75,12 +75,14 @@ Each milestone should be independently testable before moving to the next.
 - [x] **Verify:** submitting one week's results correctly updates point totals across two leagues with different custom scoring weights — confirmed via a real `applyEpisodeResults` call against two live leagues with different weights, producing different, correctly-computed totals from the same underlying results
 
 ### Phase 6 — Manager Dashboard & Pick 'Em
-- [ ] Build team roster card (active + eliminated couples, cumulative points)
-- [ ] Build live standings table (all managers, sorted by total points)
-- [ ] Build the weekly Pick 'Em lock box (elimination + top scorer predictions)
-- [ ] Enforce the prediction lock at `episodes.locks_at`
-- [ ] Wire prediction resolution into the Phase 5 scoring engine
-- [ ] **Verify:** a prediction submitted before lock resolves correctly after results are entered; a late submission is rejected
+- [x] Build team roster card (active + eliminated couples, cumulative points)
+- [x] Build live standings table (all managers, sorted by total points)
+- [x] Build the weekly Pick 'Em lock box (elimination + top scorer predictions)
+- [x] Enforce the prediction lock at `episodes.locks_at` — via `submit_prediction` (SECURITY DEFINER, same pattern as `make_draft_pick`); predictions are also hidden from other league members until lock, then revealed league-wide
+- [x] Wire prediction resolution into the Phase 5 scoring engine — this was already done in Phase 5 (`applyEpisodeResults` already fed `predictions` into `computeWeeklyScores`); the actual gap was that `predictions` had no grants/RLS at all, so nothing could read or write a row until this phase
+- [x] **Verify:** a prediction submitted before lock resolves correctly after results are entered; a late submission is rejected — confirmed end-to-end: submitted pre-lock, hidden from other members, late resubmit rejected, revealed post-lock, and correctly scored (30 + 20 = 50 prediction points) once results were entered
+
+Note: episodes previously only ever came into existence already `completed` (Phase 5's results form always created+finished them atomically), which left no way for a prediction to have anything to lock against ahead of air. Fixed by making the same results form dual-purpose: submitting with no couple scores just schedules the episode (`status: 'upcoming'`) with a lock time; adding scores later flips it to `completed`.
 
 ### Phase 7 — Waivers
 - [ ] Detect open roster slots (couple eliminated, no waiver pickup yet)
