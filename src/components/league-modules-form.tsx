@@ -267,6 +267,18 @@ export function LeagueModulesForm({
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Set Module Weight</CardTitle>
+            <CardDescription>How much each active module counts toward Standings.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col">
+            {judgesEnabled && <SettingRow label="Dance Card" value={judgesWeight} />}
+            {eliminationsEnabled && <SettingRow label="Curtain Call" value={eliminationsWeight} />}
+            {bonusEnabled && <SettingRow label="Grand Finale" value={bonusWeight} />}
+          </CardContent>
+        </Card>
+
         {judgesEnabled && (
           <Card>
             <CardHeader>
@@ -274,7 +286,6 @@ export function LeagueModulesForm({
               <CardDescription>Draft, roster, waivers, and judges&apos; score points.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col">
-              <SettingRow label="Weight" value={judgesWeight} />
               <SettingRow label="Draft counts from" value={`Week ${judgesStartsWeek}`} />
               <SettingRow label="Judges' Score Multiplier" value={judgesScoreMultiplier} />
               <SettingRow label="Survival Points" value={survivalPoints} />
@@ -297,7 +308,6 @@ export function LeagueModulesForm({
               <CardDescription>Weekly elimination and top-scorer picks.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col">
-              <SettingRow label="Weight" value={eliminationsWeight} />
               <SettingRow label="Elimination Prediction Points" value={eliminationPredictionPoints} />
               <SettingRow label="Top Scorer Prediction Points" value={topScorerPredictionPoints} />
               <SettingRow label="Pick 'Em Lock" value={`${predictionLockHoursBeforeAir}h before air`} />
@@ -312,7 +322,6 @@ export function LeagueModulesForm({
               <CardDescription>Points from a season-long guess of the full elimination order.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col">
-              <SettingRow label="Weight" value={bonusWeight} />
               <SettingRow
                 label="Deadline"
                 value={bonusDeadline ? new Date(bonusDeadline).toLocaleString() : "—"}
@@ -373,6 +382,54 @@ export function LeagueModulesForm({
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Set Module Weight</CardTitle>
+          <CardDescription>How much each active module counts toward Standings.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {judgesEnabled && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="judgesWeight">Dance Card</Label>
+              <Input
+                id="judgesWeight"
+                type="number"
+                step="0.1"
+                min={0}
+                value={judgesWeight}
+                onChange={(e) => setJudgesWeight(Number(e.target.value))}
+              />
+            </div>
+          )}
+          {eliminationsEnabled && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="eliminationsWeight">Curtain Call</Label>
+              <Input
+                id="eliminationsWeight"
+                type="number"
+                step="0.1"
+                min={0}
+                value={eliminationsWeight}
+                onChange={(e) => setEliminationsWeight(Number(e.target.value))}
+              />
+            </div>
+          )}
+          {bonusEnabled && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="bonusWeight">Grand Finale</Label>
+              <Input
+                id="bonusWeight"
+                type="number"
+                step="0.1"
+                min={0}
+                value={bonusWeight}
+                onChange={(e) => setBonusWeight(Number(e.target.value))}
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {judgesEnabled && (
         <Card>
           <CardHeader>
@@ -384,17 +441,6 @@ export function LeagueModulesForm({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="judgesWeight">Weight</Label>
-                <Input
-                  id="judgesWeight"
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  value={judgesWeight}
-                  onChange={(e) => setJudgesWeight(Number(e.target.value))}
-                />
-              </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="judgesStartsWeek">Draft counts from</Label>
                 <Select
@@ -526,17 +572,6 @@ export function LeagueModulesForm({
           <CardContent className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="eliminationsWeight">Weight</Label>
-                <Input
-                  id="eliminationsWeight"
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  value={eliminationsWeight}
-                  onChange={(e) => setEliminationsWeight(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
                 <Label htmlFor="predictionLockHoursBeforeAir">Pick &apos;Em Lock (Hours Before Air)</Label>
                 <Input
                   id="predictionLockHoursBeforeAir"
@@ -580,17 +615,6 @@ export function LeagueModulesForm({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="bonusWeight">Weight</Label>
-                <Input
-                  id="bonusWeight"
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  value={bonusWeight}
-                  onChange={(e) => setBonusWeight(Number(e.target.value))}
-                />
-              </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="bonusDeadline">
                   Deadline{browserTimeZone ? ` (${browserTimeZone})` : ""}
