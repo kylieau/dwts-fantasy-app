@@ -170,25 +170,43 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
         <CardHeader>
           <CardTitle>Scheduled Episodes</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="overflow-x-auto">
           {sortedEpisodes.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nothing scheduled yet.</p>
           ) : (
-            sortedEpisodes.map((e) => (
-              <div
-                key={e.id}
-                className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm"
-              >
-                <span>
-                  Week {e.week_number}
-                  {e.theme ? ` — ${e.theme}` : ""} — {new Date(e.airs_at).toLocaleString()}
-                  {e.is_finale ? " · Finale" : !e.is_elimination_week ? " · No elimination" : ""}
-                </span>
-                <Button variant="ghost" size="sm" onClick={() => startEdit(e)}>
-                  Edit
-                </Button>
-              </div>
-            ))
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  <th className="p-2 font-medium">Week</th>
+                  <th className="p-2 font-medium">Air Date</th>
+                  <th className="p-2 font-medium">Theme</th>
+                  <th className="p-2 font-medium">Status</th>
+                  <th className="p-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {sortedEpisodes.map((e) => (
+                  <tr
+                    key={e.id}
+                    className={`border-b border-border last:border-b-0 ${
+                      e.id === editingId ? "bg-accent/50" : ""
+                    }`}
+                  >
+                    <td className="whitespace-nowrap p-2 font-medium">{e.week_number}</td>
+                    <td className="whitespace-nowrap p-2">{new Date(e.airs_at).toLocaleString()}</td>
+                    <td className="p-2">{e.theme ?? "—"}</td>
+                    <td className="whitespace-nowrap p-2">
+                      {e.is_finale ? "Finale" : !e.is_elimination_week ? "No elimination" : "—"}
+                    </td>
+                    <td className="p-2 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => startEdit(e)}>
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </CardContent>
       </Card>

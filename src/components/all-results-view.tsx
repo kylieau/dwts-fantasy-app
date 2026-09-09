@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildPeopleDisplayNames, type CoupleNameParts } from "@/lib/couple-display";
@@ -96,23 +96,35 @@ export function AllResultsView({
     return notes.join(", ");
   }
 
-  function DanceBreakdown({ dance }: { dance: DanceScore }) {
+  function DanceBreakdownRow({
+    dance,
+    colSpan,
+    isLast,
+  }: {
+    dance: DanceScore;
+    colSpan: number;
+    isLast: boolean;
+  }) {
     const scores = judgeScoresByDance.get(dance.id) ?? [];
     const values = scores.map((s) => s.score);
     const spread = values.length > 1 ? Math.max(...values) - Math.min(...values) : 0;
     return (
-      <div className="flex flex-wrap items-baseline justify-between gap-x-2 pl-4 text-xs text-muted-foreground">
-        <span>
-          {danceStyleById.get(dance.dance_style_id) ?? "Unknown dance"}: {dance.total_score}
-          {scores.length > 0 && (
-            <>
-              {" "}
-              ({scores.map((s) => `${judgeById.get(s.judge_id) ?? "?"}: ${s.score}`).join(", ")})
-            </>
-          )}
-        </span>
-        {spread > 0 && <span>spread: {spread}</span>}
-      </div>
+      <tr className={isLast ? "border-b border-border last:border-b-0" : undefined}>
+        <td colSpan={colSpan} className="px-2 pb-1.5 pl-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs text-muted-foreground">
+            <span>
+              {danceStyleById.get(dance.dance_style_id) ?? "Unknown dance"}: {dance.total_score}
+              {scores.length > 0 && (
+                <>
+                  {" "}
+                  ({scores.map((s) => `${judgeById.get(s.judge_id) ?? "?"}: ${s.score}`).join(", ")})
+                </>
+              )}
+            </span>
+            {spread > 0 && <span>spread: {spread}</span>}
+          </div>
+        </td>
+      </tr>
     );
   }
 
@@ -174,21 +186,41 @@ export function AllResultsView({
                     {ep.is_finale ? " · Finale" : ""}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-2">
-                  {results.map((r) => (
-                    <div key={r.couple_id} className="flex flex-col gap-0.5">
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
-                        <span>{r.parts ? <CoupleName {...r.parts} /> : "Unknown"}</span>
-                        <span className="text-muted-foreground">
-                          {r.total} pts · {r.outcome.replace("_", " ")}
-                          {noteLabel(r) ? ` · ${noteLabel(r)}` : ""}
-                        </span>
-                      </div>
-                      {r.dances.map((d) => (
-                        <DanceBreakdown key={d.id} dance={d} />
+                <CardContent className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                        <th className="p-2 font-medium">Couple</th>
+                        <th className="p-2 font-medium">Pts</th>
+                        <th className="p-2 font-medium">Outcome</th>
+                        <th className="p-2 font-medium">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.map((r) => (
+                        <Fragment key={r.couple_id}>
+                          <tr className={r.dances.length === 0 ? "border-b border-border last:border-b-0" : undefined}>
+                            <td className="whitespace-nowrap p-2">
+                              {r.parts ? <CoupleName {...r.parts} /> : "Unknown"}
+                            </td>
+                            <td className="p-2">{r.total}</td>
+                            <td className="whitespace-nowrap p-2 capitalize">
+                              {r.outcome.replace("_", " ")}
+                            </td>
+                            <td className="p-2 text-muted-foreground">{noteLabel(r) || "—"}</td>
+                          </tr>
+                          {r.dances.map((d, i) => (
+                            <DanceBreakdownRow
+                              key={d.id}
+                              dance={d}
+                              colSpan={4}
+                              isLast={i === r.dances.length - 1}
+                            />
+                          ))}
+                        </Fragment>
                       ))}
-                    </div>
-                  ))}
+                    </tbody>
+                  </table>
                 </CardContent>
               </Card>
             );
@@ -218,24 +250,42 @@ export function AllResultsView({
                   <CoupleName {...(coupleDisplayNames[c.id] ?? { celebrity: c.celebrity_name, pro: c.pro_name })} />
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                {history.map((h, i) => (
-                  <div key={i} className="flex flex-col gap-0.5">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
-                      <span>
-                        Week {h.episode?.week_number}
-                        {h.episode?.theme ? ` — ${h.episode.theme}` : ""}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {h.total} pts · {h.outcome.replace("_", " ")}
-                        {noteLabel(h) ? ` · ${noteLabel(h)}` : ""}
-                      </span>
-                    </div>
-                    {h.dances.map((d) => (
-                      <DanceBreakdown key={d.id} dance={d} />
+              <CardContent className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                      <th className="p-2 font-medium">Week</th>
+                      <th className="p-2 font-medium">Pts</th>
+                      <th className="p-2 font-medium">Outcome</th>
+                      <th className="p-2 font-medium">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((h, i) => (
+                      <Fragment key={i}>
+                        <tr className={h.dances.length === 0 ? "border-b border-border last:border-b-0" : undefined}>
+                          <td className="whitespace-nowrap p-2">
+                            Week {h.episode?.week_number}
+                            {h.episode?.theme ? ` — ${h.episode.theme}` : ""}
+                          </td>
+                          <td className="p-2">{h.total}</td>
+                          <td className="whitespace-nowrap p-2 capitalize">
+                            {h.outcome.replace("_", " ")}
+                          </td>
+                          <td className="p-2 text-muted-foreground">{noteLabel(h) || "—"}</td>
+                        </tr>
+                        {h.dances.map((d, j) => (
+                          <DanceBreakdownRow
+                            key={d.id}
+                            dance={d}
+                            colSpan={4}
+                            isLast={j === h.dances.length - 1}
+                          />
+                        ))}
+                      </Fragment>
                     ))}
-                  </div>
-                ))}
+                  </tbody>
+                </table>
               </CardContent>
             </Card>
           );
