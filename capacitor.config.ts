@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.kylieau.dwtsfantasy',
+  appId: 'com.kylieau.mirrorballmadness',
   appName: 'Mirrorball Madness',
   webDir: 'public',
   server: {
