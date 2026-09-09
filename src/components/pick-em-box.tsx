@@ -56,6 +56,10 @@ export function PickEmBox({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
+  const coupleItems = Object.fromEntries(
+    activeCouples.map((c) => [c.id, coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`])
+  );
+
   if (!episode) {
     return (
       <Card>
@@ -102,14 +106,14 @@ export function PickEmBox({
           <>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Who gets eliminated?</label>
-              <Select value={eliminatedId} onValueChange={(v) => setEliminatedId(v ?? "")}>
+              <Select items={coupleItems} value={eliminatedId} onValueChange={(v) => setEliminatedId(v ?? "")}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Pick a couple" />
                 </SelectTrigger>
                 <SelectContent>
                   {activeCouples.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
+                      {coupleItems[c.id]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -117,14 +121,14 @@ export function PickEmBox({
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Who scores highest?</label>
-              <Select value={topScorerId} onValueChange={(v) => setTopScorerId(v ?? "")}>
+              <Select items={coupleItems} value={topScorerId} onValueChange={(v) => setTopScorerId(v ?? "")}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Pick a couple" />
                 </SelectTrigger>
                 <SelectContent>
                   {activeCouples.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
+                      {coupleItems[c.id]}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -85,7 +85,11 @@ export default async function LeagueSettingsPage({
           <form action={boundUpdateLeagueSettings} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="waiverMode">Waiver mode</Label>
-              <Select name="waiverMode" defaultValue={league.waiver_mode}>
+              <Select
+                name="waiverMode"
+                items={{ locked: "Locked (no waivers)", waivers: "Waivers enabled" }}
+                defaultValue={league.waiver_mode}
+              >
                 <SelectTrigger id="waiverMode" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -102,6 +106,11 @@ export default async function LeagueSettingsPage({
               </Label>
               <Select
                 name="waiverClaimMethod"
+                items={{
+                  reverse_standings: "Reverse standings",
+                  fcfs: "First come, first served",
+                  manual: "Manual (commissioner decides)",
+                }}
                 defaultValue={league.waiver_claim_method ?? "reverse_standings"}
               >
                 <SelectTrigger id="waiverClaimMethod" className="w-full">

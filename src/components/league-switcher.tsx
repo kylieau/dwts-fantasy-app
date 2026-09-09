@@ -17,8 +17,11 @@ export function LeagueSwitcher({
   const router = useRouter();
   const params = useParams<{ id?: string }>();
 
+  const leagueItems = Object.fromEntries(leagues.map((league) => [league.id, league.name]));
+
   return (
     <Select
+      items={leagueItems}
       value={params.id}
       onValueChange={(id) => router.push(`/leagues/${id}`)}
     >

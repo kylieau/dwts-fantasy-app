@@ -56,6 +56,10 @@ export function WaiversPanel({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  const coupleItems = Object.fromEntries(
+    availableCouples.map((c) => [c.id, coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`])
+  );
+
   async function handleClaim(slotNumber: number) {
     const coupleId = selections[slotNumber];
     if (!coupleId) return;
@@ -118,6 +122,7 @@ export function WaiversPanel({
                   Slot {slot.slotNumber} ({slot.formerCoupleName})
                 </span>
                 <Select
+                  items={coupleItems}
                   value={selections[slot.slotNumber] ?? ""}
                   onValueChange={(v) =>
                     setSelections((prev) => ({ ...prev, [slot.slotNumber]: v ?? "" }))
@@ -129,7 +134,7 @@ export function WaiversPanel({
                   <SelectContent>
                     {availableCouples.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
+                        {coupleItems[c.id]}
                       </SelectItem>
                     ))}
                   </SelectContent>
