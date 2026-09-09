@@ -180,7 +180,6 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
                   <th className="p-2 font-medium">Week</th>
                   <th className="p-2 font-medium">Air Date</th>
                   <th className="p-2 font-medium">Theme</th>
-                  <th className="p-2 font-medium">Status</th>
                   <th className="p-2" />
                 </tr>
               </thead>
@@ -197,9 +196,6 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
                       {new Date(e.airs_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                     </td>
                     <td className="p-2">{e.theme ?? "—"}</td>
-                    <td className="whitespace-nowrap p-2">
-                      {e.is_finale ? "Finale" : !e.is_elimination_week ? "No elimination" : "—"}
-                    </td>
                     <td className="p-2 text-right">
                       <Button variant="ghost" size="sm" onClick={() => startEdit(e)}>
                         Edit
