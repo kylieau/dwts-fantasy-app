@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { scheduleEpisode } from "@/app/admin/results/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useBrowserTimeZone, airsAtToUtcIso } from "@/lib/use-browser-time-zone";
+import {
+  useBrowserTimeZone,
+  airsAtToUtcIso,
+  utcIsoToLocalInput,
+  nextTuesdayAt8pmEasternForInput,
+} from "@/lib/use-browser-time-zone";
 
 type Episode = {
   id: string;
@@ -16,14 +21,6 @@ type Episode = {
   is_elimination_week: boolean;
   is_finale: boolean;
 };
-
-// Converts a stored UTC timestamp back into the datetime-local input format
-// (no timezone suffix, minute precision) in the viewer's own time zone.
-function utcIsoToLocalInput(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
   const sortedEpisodes = [...episodes].sort((a, b) => a.week_number - b.week_number);
@@ -41,6 +38,24 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Next Tuesday 8pm ET for the first-ever episode; otherwise a week after
+  // whatever's already the last scheduled one, so scheduling several weeks in
+  // one sitting doesn't keep suggesting the same date. Computed client-side
+  // only (useEffect, not the initial render) since it depends on "now" and
+  // the browser's own time zone — doing it during render would mismatch the
+  // server's SSR pass and trigger a hydration error.
+  function defaultAirDate(): string {
+    if (sortedEpisodes.length === 0) return nextTuesdayAt8pmEasternForInput();
+    const last = sortedEpisodes[sortedEpisodes.length - 1];
+    const weekLater = new Date(last.airs_at).getTime() + 7 * 24 * 60 * 60 * 1000;
+    return utcIsoToLocalInput(new Date(weekLater).toISOString());
+  }
+
+  useEffect(() => {
+    setAirsAt(defaultAirDate());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function startEdit(e: Episode) {
     setEditingId(e.id);
     setWeekNumber(e.week_number);
@@ -55,7 +70,7 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
     setWeekNumber(
       sortedEpisodes.length > 0 ? sortedEpisodes[sortedEpisodes.length - 1].week_number + 1 : 1
     );
-    setAirsAt("");
+    setAirsAt(defaultAirDate());
     setTheme("");
     setIsEliminationWeek(true);
     setIsFinale(false);
