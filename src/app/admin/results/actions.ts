@@ -28,7 +28,9 @@ export async function submitEpisodeResults(
   const access = await requireResultsAccess();
   if (access.error) return access;
 
-  return applyEpisodeResults(createAdminClient(), input);
+  const result = await applyEpisodeResults(createAdminClient(), input);
+  if (!result.error) revalidatePath("/admin/results");
+  return result;
 }
 
 export async function addJudge(name: string): Promise<{ error: string | null }> {
