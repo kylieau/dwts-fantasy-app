@@ -21,6 +21,7 @@ type Outcome = "safe" | "eliminated" | "withdrawn" | "bye" | "winner" | "runner_
 
 type SubmittedDance = {
   key: string;
+  weekNumber: number;
   coupleId: string;
   danceStyleId: string;
   judgeScores: { judgeId: string; score: number }[];
@@ -95,9 +96,7 @@ export function ResultsForm({
   const [editingKey, setEditingKey] = useState<string | null>(null);
 
   const [submittedDances, setSubmittedDances] = useState<SubmittedDance[]>([]);
-  const [buckets, setBuckets] = useState<Record<string, Buckets>>(() =>
-    Object.fromEntries(couples.map((c) => [c.id, emptyBuckets()]))
-  );
+  const [bucketsByWeek, setBucketsByWeek] = useState<Record<number, Record<string, Buckets>>>({});
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,12 +117,17 @@ export function ResultsForm({
   const editingCoupleId = submittedDances.find((d) => d.key === editingKey)?.coupleId;
   const danceCountByCouple = new Map<string, number>();
   for (const d of submittedDances) {
-    if (d.key === editingKey) continue;
+    if (d.key === editingKey || d.weekNumber !== weekNumber) continue;
     danceCountByCouple.set(d.coupleId, (danceCountByCouple.get(d.coupleId) ?? 0) + 1);
   }
   const availableCouples = couples.filter(
     (c) => c.id === editingCoupleId || (danceCountByCouple.get(c.id) ?? 0) < expectedDanceCount
   );
+
+  const dancesForCurrentWeek = submittedDances.filter((d) => d.weekNumber === weekNumber);
+  const dancesForOtherWeeks = submittedDances.filter((d) => d.weekNumber !== weekNumber);
+
+  const buckets = bucketsByWeek[weekNumber] ?? Object.fromEntries(couples.map((c) => [c.id, emptyBuckets()]));
 
   function toggleJudge(judgeId: string) {
     setSelectedJudgeIds((prev) => {
@@ -144,7 +148,13 @@ export function ResultsForm({
       setSubmittedDances((prev) =>
         prev.map((d) =>
           d.key === editingKey
-            ? { ...d, coupleId: selectedCoupleId, danceStyleId: selectedDanceStyleId, judgeScores }
+            ? {
+                ...d,
+                weekNumber,
+                coupleId: selectedCoupleId,
+                danceStyleId: selectedDanceStyleId,
+                judgeScores,
+              }
             : d
         )
       );
@@ -154,6 +164,7 @@ export function ResultsForm({
         ...prev,
         {
           key: `${Date.now()}-${Math.random()}`,
+          weekNumber,
           coupleId: selectedCoupleId,
           danceStyleId: selectedDanceStyleId,
           judgeScores,
@@ -167,6 +178,7 @@ export function ResultsForm({
 
   function startEditDanceSubmission(d: SubmittedDance) {
     setEditingKey(d.key);
+    setWeekNumber(d.weekNumber);
     setSelectedCoupleId(d.coupleId);
     setSelectedDanceStyleId(d.danceStyleId);
     setJudgeScoreInputs(
@@ -187,10 +199,14 @@ export function ResultsForm({
   }
 
   function toggleBucket(coupleId: string, bucket: keyof Buckets) {
-    setBuckets((prev) => ({
-      ...prev,
-      [coupleId]: { ...prev[coupleId], [bucket]: !prev[coupleId][bucket] },
-    }));
+    setBucketsByWeek((prev) => {
+      const week = prev[weekNumber] ?? Object.fromEntries(couples.map((c) => [c.id, emptyBuckets()]));
+      const couple = week[coupleId] ?? emptyBuckets();
+      return {
+        ...prev,
+        [weekNumber]: { ...week, [coupleId]: { ...couple, [bucket]: !couple[bucket] } },
+      };
+    });
   }
 
   async function handleSubmit() {
@@ -200,10 +216,10 @@ export function ResultsForm({
 
     const entries = couples
       .map((c) => {
-        const dances = submittedDances
+        const dances = dancesForCurrentWeek
           .filter((d) => d.coupleId === c.id)
           .map((d) => ({ danceStyleId: d.danceStyleId, judgeScores: d.judgeScores }));
-        const b = buckets[c.id];
+        const b = buckets[c.id] ?? emptyBuckets();
         return {
           coupleId: c.id,
           dances,
@@ -350,7 +366,7 @@ export function ResultsForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Enter Dance Results</CardTitle>
+          <CardTitle>Enter Dance Results — Week {weekNumber}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -438,16 +454,27 @@ export function ResultsForm({
             <CardTitle>Dance Results Submitted</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
+            {dancesForOtherWeeks.length > 0 && (
+              <p className="text-sm text-destructive">
+                {dancesForOtherWeeks.length} entr
+                {dancesForOtherWeeks.length === 1 ? "y" : "ies"} below{" "}
+                {dancesForOtherWeeks.length === 1 ? "is" : "are"} tagged for a different week
+                than the Week number set above, and won&apos;t be included when you Save
+                results. Edit each one to fix its week, or change Week number back.
+              </p>
+            )}
             {submittedDances.map((d) => {
               const styleName = danceStyles.find((s) => s.id === d.danceStyleId)?.name ?? "Unknown";
               const total = d.judgeScores.reduce((sum, js) => sum + js.score, 0);
+              const weekMismatch = d.weekNumber !== weekNumber;
               return (
                 <div
                   key={d.key}
                   className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm"
                 >
-                  <span>
-                    {coupleDisplayNames[d.coupleId] ?? "Unknown"} — {styleName}: {total}
+                  <span className={weekMismatch ? "text-destructive" : undefined}>
+                    Week {d.weekNumber} — {coupleDisplayNames[d.coupleId] ?? "Unknown"} —{" "}
+                    {styleName}: {total}
                   </span>
                   <Button variant="ghost" size="sm" onClick={() => startEditDanceSubmission(d)}>
                     Edit
@@ -461,7 +488,7 @@ export function ResultsForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Elimination</CardTitle>
+          <CardTitle>Elimination — Week {weekNumber}</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -476,22 +503,25 @@ export function ResultsForm({
               </tr>
             </thead>
             <tbody>
-              {couples.map((c) => (
-                <tr key={c.id} className="border-b border-border last:border-b-0">
-                  <td className="whitespace-nowrap p-2">
-                    {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
-                  </td>
-                  {visibleBucketColumns.map((col) => (
-                    <td key={col.key} className="p-2 text-center">
-                      <input
-                        type="checkbox"
-                        checked={buckets[c.id][col.key]}
-                        onChange={() => toggleBucket(c.id, col.key)}
-                      />
+              {couples.map((c) => {
+                const coupleBuckets = buckets[c.id] ?? emptyBuckets();
+                return (
+                  <tr key={c.id} className="border-b border-border last:border-b-0">
+                    <td className="whitespace-nowrap p-2">
+                      {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    {visibleBucketColumns.map((col) => (
+                      <td key={col.key} className="p-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={coupleBuckets[col.key]}
+                          onChange={() => toggleBucket(c.id, col.key)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           <p className="pt-2 text-xs text-muted-foreground">
