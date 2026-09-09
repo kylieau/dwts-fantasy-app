@@ -65,6 +65,12 @@ const WAIVER_MODE_ITEMS: Record<WaiverMode, string> = {
   waivers: "Waivers enabled",
 };
 
+const MODULE_INFO = [
+  { name: "Dance Card", description: "Draft Fantasy" },
+  { name: "Curtain Call", description: "Weekly Pick 'Em" },
+  { name: "Grand Finale", description: "Full-Order Prediction" },
+] as const;
+
 const WAIVER_CLAIM_METHOD_ITEMS: Record<WaiverClaimMethod, string> = {
   reverse_standings: "Reverse standings",
   fcfs: "First come, first served",
@@ -246,9 +252,18 @@ export function LeagueModulesForm({
             <CardDescription>Which modules this league runs.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col">
-            <SettingRow label="Dance Card" value={judgesEnabled ? "On" : "Off"} />
-            <SettingRow label="Curtain Call" value={eliminationsEnabled ? "On" : "Off"} />
-            <SettingRow label="Grand Finale" value={bonusEnabled ? "On" : "Off"} />
+            {MODULE_INFO.map((m, i) => (
+              <div
+                key={m.name}
+                className="grid grid-cols-[1fr_1fr_auto] items-center gap-4 border-b border-border py-2 text-sm last:border-b-0"
+              >
+                <span className="font-medium">{m.name}</span>
+                <span className="text-muted-foreground">{m.description}</span>
+                <span className="font-medium">
+                  {[judgesEnabled, eliminationsEnabled, bonusEnabled][i] ? "On" : "Off"}
+                </span>
+              </div>
+            ))}
           </CardContent>
         </Card>
 
@@ -331,30 +346,30 @@ export function LeagueModulesForm({
               Required — save this before the rest of your league is available.
             </p>
           )}
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={judgesEnabled}
-              onChange={(e) => setJudgesEnabled(e.target.checked)}
-            />
-            Dance Card
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={eliminationsEnabled}
-              onChange={(e) => setEliminationsEnabled(e.target.checked)}
-            />
-            Curtain Call
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={bonusEnabled}
-              onChange={(e) => setBonusEnabled(e.target.checked)}
-            />
-            Grand Finale
-          </label>
+          <div className="flex flex-col">
+            {(
+              [
+                [judgesEnabled, setJudgesEnabled],
+                [eliminationsEnabled, setEliminationsEnabled],
+                [bonusEnabled, setBonusEnabled],
+              ] as const
+            ).map(([checked, setChecked], i) => (
+              <label
+                key={MODULE_INFO[i].name}
+                className="grid grid-cols-[1fr_1fr] items-center gap-4 border-b border-border py-2 text-sm last:border-b-0"
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => setChecked(e.target.checked)}
+                  />
+                  {MODULE_INFO[i].name}
+                </span>
+                <span className="text-muted-foreground">{MODULE_INFO[i].description}</span>
+              </label>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
