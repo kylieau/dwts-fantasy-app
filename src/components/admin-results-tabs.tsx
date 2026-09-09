@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ResultsForm } from "@/components/results-form";
 import { AllResultsView } from "@/components/all-results-view";
+import { ScheduleManager } from "@/components/schedule-manager";
 import { JudgesDanceStylesManager } from "@/components/judges-dance-styles-manager";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
@@ -57,7 +58,7 @@ export function AdminResultsTabs({
   judgeScores: JudgeScore[];
   episodeResults: EpisodeResult[];
 }) {
-  const [tab, setTab] = useState<"enter" | "view" | "manage">("enter");
+  const [tab, setTab] = useState<"enter" | "view" | "schedule" | "manage">("enter");
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-12">
@@ -79,10 +80,17 @@ export function AdminResultsTabs({
         </Button>
         <Button
           size="sm"
+          variant={tab === "schedule" ? "default" : "ghost"}
+          onClick={() => setTab("schedule")}
+        >
+          Set Schedule
+        </Button>
+        <Button
+          size="sm"
           variant={tab === "manage" ? "default" : "ghost"}
           onClick={() => setTab("manage")}
         >
-          Judges &amp; Dance Styles
+          Additional Settings
         </Button>
       </div>
 
@@ -92,6 +100,7 @@ export function AdminResultsTabs({
           coupleDisplayNames={activeCoupleDisplayNames}
           judges={judges}
           danceStyles={danceStyles}
+          episodes={episodes}
         />
       )}
       {tab === "view" && (
@@ -106,6 +115,7 @@ export function AdminResultsTabs({
           danceStyles={danceStyles}
         />
       )}
+      {tab === "schedule" && <ScheduleManager episodes={episodes} />}
       {tab === "manage" && (
         <JudgesDanceStylesManager judges={judges} danceStyles={danceStyles} />
       )}

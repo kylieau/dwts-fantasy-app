@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { submitEpisodeResults } from "@/app/admin/results/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { buildPeopleDisplayNames } from "@/lib/couple-display";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 type Named = { id: string; name: string };
+type ScheduledEpisode = { id: string; week_number: number; airs_at: string; theme: string | null };
 type Outcome = "safe" | "eliminated" | "withdrawn" | "bye" | "winner" | "runner_up" | "third_place";
 
 type SubmittedDance = {
@@ -74,15 +75,23 @@ export function ResultsForm({
   coupleDisplayNames,
   judges,
   danceStyles,
+  episodes,
 }: {
   couples: Couple[];
   coupleDisplayNames: Record<string, string>;
   judges: Named[];
   danceStyles: Named[];
+  episodes: ScheduledEpisode[];
 }) {
-  const [weekNumber, setWeekNumber] = useState(1);
-  const [airsAt, setAirsAt] = useState("");
-  const [theme, setTheme] = useState("");
+  const sortedEpisodes = [...episodes].sort((a, b) => a.week_number - b.week_number);
+
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState("");
+  const selectedEpisode = sortedEpisodes.find((e) => e.id === selectedEpisodeId) ?? null;
+  // Falls back to 0 only when nothing is selected yet — every place this is
+  // used for real (dances, buckets, submit) is already gated on
+  // selectedEpisode being non-null, so the sentinel is never actually acted on.
+  const weekNumber = selectedEpisode?.week_number ?? 0;
+
   const [expectedDanceCount, setExpectedDanceCount] = useState(1);
   const [isEliminationWeek, setIsEliminationWeek] = useState(true);
   const [isFinale, setIsFinale] = useState(false);
@@ -104,14 +113,6 @@ export function ResultsForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Read on the client only, after mount — the server-rendered pass has no
-  // meaningful browser time zone to report, and computing it during render
-  // would mismatch the server's SSR output and trigger a hydration error.
-  const [browserTimeZone, setBrowserTimeZone] = useState("");
-  useEffect(() => {
-    setBrowserTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-  }, []);
-
   const activeJudges = judges.filter((j) => selectedJudgeIds.has(j.id));
   const liveTotal = activeJudges.reduce((sum, j) => {
     const n = Number(judgeScoreInputs[j.id]);
@@ -122,6 +123,12 @@ export function ResultsForm({
     couples.map((c) => [c.id, coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`])
   );
   const danceStyleItems = Object.fromEntries(danceStyles.map((d) => [d.id, d.name]));
+  const episodeItems = Object.fromEntries(
+    sortedEpisodes.map((e) => [
+      e.id,
+      `Week ${e.week_number}${e.theme ? ` — ${e.theme}` : ""} — ${new Date(e.airs_at).toLocaleDateString()}`,
+    ])
+  );
   const judgeDisplayNames = buildPeopleDisplayNames(judges);
 
   const editingCoupleId = submittedDances.find((d) => d.key === editingKey)?.coupleId;
@@ -147,12 +154,6 @@ export function ResultsForm({
       else next.add(judgeId);
       return next;
     });
-  }
-
-  function airsAtToUtcIso(localValue: string): string | null {
-    if (!localValue) return null;
-    const date = new Date(localValue);
-    return Number.isNaN(date.getTime()) ? null : date.toISOString();
   }
 
   function submitDanceEntry() {
@@ -194,8 +195,9 @@ export function ResultsForm({
   }
 
   function startEditDanceSubmission(d: SubmittedDance) {
+    const episodeForDance = sortedEpisodes.find((e) => e.week_number === d.weekNumber);
+    if (episodeForDance) setSelectedEpisodeId(episodeForDance.id);
     setEditingKey(d.key);
-    setWeekNumber(d.weekNumber);
     setSelectedCoupleId(d.coupleId);
     setSelectedDanceStyleId(d.danceStyleId);
     setJudgeScoreInputs(
@@ -230,13 +232,8 @@ export function ResultsForm({
     setError(null);
     setSuccess(false);
 
-    if (!overviewConfirmed) {
+    if (!selectedEpisode || !overviewConfirmed) {
       setError("Confirm the Episode Overview above before saving.");
-      return;
-    }
-    const airsAtUtc = airsAtToUtcIso(airsAt);
-    if (!airsAtUtc) {
-      setError("Enter a valid air date.");
       return;
     }
 
@@ -271,9 +268,9 @@ export function ResultsForm({
       );
 
     const result = await submitEpisodeResults({
-      weekNumber,
-      airsAt: airsAtUtc,
-      theme: theme.trim() || null,
+      weekNumber: selectedEpisode.week_number,
+      airsAt: selectedEpisode.airs_at,
+      theme: selectedEpisode.theme,
       expectedDanceCount,
       isEliminationWeek,
       isFinale,
@@ -322,40 +319,50 @@ export function ResultsForm({
           <CardTitle>Episode Overview</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label>Week number</Label>
-            <Input
-              type="number"
-              min={1}
-              value={weekNumber}
-              onChange={(e) => {
-                setOverviewConfirmed(false);
-                setWeekNumber(Number(e.target.value));
-              }}
-            />
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label>Scheduled episode</Label>
+            {sortedEpisodes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No episodes scheduled yet — add one under the Set Schedule tab first.
+              </p>
+            ) : (
+              <Select
+                items={episodeItems}
+                value={selectedEpisodeId}
+                onValueChange={(v) => {
+                  setOverviewConfirmed(false);
+                  setSelectedEpisodeId(v ?? "");
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a week" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortedEpisodes.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {episodeItems[e.id]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
-          <div className="flex flex-col gap-2">
-            <Label>Air date{browserTimeZone ? ` (${browserTimeZone})` : ""}</Label>
-            <Input
-              type="datetime-local"
-              value={airsAt}
-              onChange={(e) => {
-                setOverviewConfirmed(false);
-                setAirsAt(e.target.value);
-              }}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label>Theme</Label>
-            <Input
-              placeholder="e.g. Villains Night"
-              value={theme}
-              onChange={(e) => {
-                setOverviewConfirmed(false);
-                setTheme(e.target.value);
-              }}
-            />
-          </div>
+          {selectedEpisode && (
+            <>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Week number</Label>
+                <p className="text-sm">{selectedEpisode.week_number}</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Air date</Label>
+                <p className="text-sm">{new Date(selectedEpisode.airs_at).toLocaleString()}</p>
+              </div>
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <Label className="text-xs text-muted-foreground">Theme</Label>
+                <p className="text-sm">{selectedEpisode.theme ?? "—"}</p>
+              </div>
+            </>
+          )}
           <div className="flex flex-col gap-2">
             <Label>Dances (per Couple)</Label>
             <Input
@@ -418,7 +425,11 @@ export function ResultsForm({
                 </Button>
               </>
             ) : (
-              <Button size="sm" onClick={() => setOverviewConfirmed(true)} disabled={!airsAt}>
+              <Button
+                size="sm"
+                onClick={() => setOverviewConfirmed(true)}
+                disabled={!selectedEpisodeId}
+              >
                 Confirm Episode Overview
               </Button>
             )}
@@ -435,177 +446,178 @@ export function ResultsForm({
       )}
 
       {overviewConfirmed && (
-      <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Enter Dance Results — Week {weekNumber}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Select
-              items={coupleItems}
-              value={selectedCoupleId}
-              onValueChange={(v) => setSelectedCoupleId(v ?? "")}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Couple" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableCouples.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {coupleItems[c.id]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              items={danceStyleItems}
-              value={selectedDanceStyleId}
-              onValueChange={(v) => setSelectedDanceStyleId(v ?? "")}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Dance style" />
-              </SelectTrigger>
-              <SelectContent>
-                {danceStyles.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            {activeJudges.map((j) => (
-              <div key={j.id} className="flex flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">
-                  {judgeDisplayNames.get(j.id) ?? j.name}
-                </Label>
-                <Input
-                  className="w-20"
-                  placeholder="—"
-                  value={judgeScoreInputs[j.id] ?? ""}
-                  onChange={(e) =>
-                    setJudgeScoreInputs((prev) => ({ ...prev, [j.id]: e.target.value }))
-                  }
-                />
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Enter Dance Results — Week {weekNumber}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Select
+                  items={coupleItems}
+                  value={selectedCoupleId}
+                  onValueChange={(v) => setSelectedCoupleId(v ?? "")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Couple" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCouples.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {coupleItems[c.id]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  items={danceStyleItems}
+                  value={selectedDanceStyleId}
+                  onValueChange={(v) => setSelectedDanceStyleId(v ?? "")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Dance style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {danceStyles.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ))}
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-muted-foreground">Total</Label>
-              <p className="flex h-8 w-16 items-center text-sm font-medium">{liveTotal}</p>
-            </div>
-            <Button
-              size="sm"
-              onClick={submitDanceEntry}
-              disabled={!selectedCoupleId || !selectedDanceStyleId}
-            >
-              {editingKey ? "Save changes" : "Submit"}
-            </Button>
-            {editingKey && (
-              <>
+              <div className="flex flex-wrap items-end gap-3">
+                {activeJudges.map((j) => (
+                  <div key={j.id} className="flex flex-col gap-1">
+                    <Label className="text-xs text-muted-foreground">
+                      {judgeDisplayNames.get(j.id) ?? j.name}
+                    </Label>
+                    <Input
+                      className="w-20"
+                      placeholder="—"
+                      value={judgeScoreInputs[j.id] ?? ""}
+                      onChange={(e) =>
+                        setJudgeScoreInputs((prev) => ({ ...prev, [j.id]: e.target.value }))
+                      }
+                    />
+                  </div>
+                ))}
+                <div className="flex flex-col gap-1">
+                  <Label className="text-xs text-muted-foreground">Total</Label>
+                  <p className="flex h-8 w-16 items-center text-sm font-medium">{liveTotal}</p>
+                </div>
                 <Button
                   size="sm"
-                  variant="ghost"
-                  onClick={() => deleteDanceSubmission(editingKey)}
+                  onClick={submitDanceEntry}
+                  disabled={!selectedCoupleId || !selectedDanceStyleId}
                 >
-                  Delete
+                  {editingKey ? "Save changes" : "Submit"}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={cancelEditDanceSubmission}>
-                  Cancel
-                </Button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                {editingKey && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => deleteDanceSubmission(editingKey)}
+                    >
+                      Delete
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={cancelEditDanceSubmission}>
+                      Cancel
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-      {submittedDances.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Dance Results Submitted</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {dancesForOtherWeeks.length > 0 && (
-              <p className="text-sm text-destructive">
-                {dancesForOtherWeeks.length} entr
-                {dancesForOtherWeeks.length === 1 ? "y" : "ies"} below{" "}
-                {dancesForOtherWeeks.length === 1 ? "is" : "are"} tagged for a different week
-                than the Week number set above, and won&apos;t be included when you Save
-                results. Edit each one to fix its week, or change Week number back.
-              </p>
-            )}
-            {submittedDances.map((d) => {
-              const styleName = danceStyles.find((s) => s.id === d.danceStyleId)?.name ?? "Unknown";
-              const total = d.judgeScores.reduce((sum, js) => sum + js.score, 0);
-              const weekMismatch = d.weekNumber !== weekNumber;
-              return (
-                <div
-                  key={d.key}
-                  className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm"
-                >
-                  <span className={weekMismatch ? "text-destructive" : undefined}>
-                    Week {d.weekNumber} — {coupleDisplayNames[d.coupleId] ?? "Unknown"} —{" "}
-                    {styleName}: {total}
-                  </span>
-                  <Button variant="ghost" size="sm" onClick={() => startEditDanceSubmission(d)}>
-                    Edit
-                  </Button>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
+          {submittedDances.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Dance Results Submitted</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                {dancesForOtherWeeks.length > 0 && (
+                  <p className="text-sm text-destructive">
+                    {dancesForOtherWeeks.length} entr
+                    {dancesForOtherWeeks.length === 1 ? "y" : "ies"} below{" "}
+                    {dancesForOtherWeeks.length === 1 ? "is" : "are"} tagged for a different week
+                    than the one selected above, and won&apos;t be included when you Save
+                    results. Edit each one to fix its week, or select that week above.
+                  </p>
+                )}
+                {submittedDances.map((d) => {
+                  const styleName =
+                    danceStyles.find((s) => s.id === d.danceStyleId)?.name ?? "Unknown";
+                  const total = d.judgeScores.reduce((sum, js) => sum + js.score, 0);
+                  const weekMismatch = d.weekNumber !== weekNumber;
+                  return (
+                    <div
+                      key={d.key}
+                      className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm"
+                    >
+                      <span className={weekMismatch ? "text-destructive" : undefined}>
+                        Week {d.weekNumber} — {coupleDisplayNames[d.coupleId] ?? "Unknown"} —{" "}
+                        {styleName}: {total}
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={() => startEditDanceSubmission(d)}>
+                        Edit
+                      </Button>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Elimination — Week {weekNumber}</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="p-2 text-left">Couple</th>
-                {visibleBucketColumns.map((col) => (
-                  <th key={col.key} className="whitespace-nowrap p-2 text-center">
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {couples.map((c) => {
-                const coupleBuckets = buckets[c.id] ?? emptyBuckets();
-                return (
-                  <tr key={c.id} className="border-b border-border last:border-b-0">
-                    <td className="whitespace-nowrap p-2">
-                      {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
-                    </td>
+          <Card>
+            <CardHeader>
+              <CardTitle>Elimination — Week {weekNumber}</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="p-2 text-left">Couple</th>
                     {visibleBucketColumns.map((col) => (
-                      <td key={col.key} className="p-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={coupleBuckets[col.key]}
-                          onChange={() => toggleBucket(c.id, col.key)}
-                        />
-                      </td>
+                      <th key={col.key} className="whitespace-nowrap p-2 text-center">
+                        {col.label}
+                      </th>
                     ))}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <p className="pt-2 text-xs text-muted-foreground">
-            A couple with no box checked is Safe.
-          </p>
-        </CardContent>
-      </Card>
+                </thead>
+                <tbody>
+                  {couples.map((c) => {
+                    const coupleBuckets = buckets[c.id] ?? emptyBuckets();
+                    return (
+                      <tr key={c.id} className="border-b border-border last:border-b-0">
+                        <td className="whitespace-nowrap p-2">
+                          {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
+                        </td>
+                        {visibleBucketColumns.map((col) => (
+                          <td key={col.key} className="p-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={coupleBuckets[col.key]}
+                              onChange={() => toggleBucket(c.id, col.key)}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="pt-2 text-xs text-muted-foreground">
+                A couple with no box checked is Safe.
+              </p>
+            </CardContent>
+          </Card>
 
-      <Button onClick={handleSubmit} disabled={submitting}>
-        {submitting ? "Saving..." : "Save results"}
-      </Button>
-      </>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? "Saving..." : "Save results"}
+          </Button>
+        </>
       )}
     </div>
   );

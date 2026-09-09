@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { applyEpisodeResults, resultsEntryOpenToAll, type EpisodeResultsInput } from "@/lib/results";
+import {
+  applyEpisodeResults,
+  applyEpisodeSchedule,
+  resultsEntryOpenToAll,
+  type EpisodeResultsInput,
+  type ScheduleEpisodeInput,
+} from "@/lib/results";
 
 async function requireResultsAccess(): Promise<{ error: string | null }> {
   const supabase = await createClient();
@@ -29,6 +35,17 @@ export async function submitEpisodeResults(
   if (access.error) return access;
 
   const result = await applyEpisodeResults(createAdminClient(), input);
+  if (!result.error) revalidatePath("/admin/results");
+  return result;
+}
+
+export async function scheduleEpisode(
+  input: ScheduleEpisodeInput
+): Promise<{ error: string | null }> {
+  const access = await requireResultsAccess();
+  if (access.error) return access;
+
+  const result = await applyEpisodeSchedule(createAdminClient(), input);
   if (!result.error) revalidatePath("/admin/results");
   return result;
 }

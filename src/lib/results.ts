@@ -37,6 +37,40 @@ export function resultsEntryOpenToAll(): boolean {
   return process.env.RESULTS_ENTRY_OPEN_TO_ALL === "true";
 }
 
+async function getActiveSeasonId(
+  admin: SupabaseClient<Database>
+): Promise<{ seasonId: string | null; error: string | null }> {
+  const { data: season, error } = await admin
+    .from("seasons")
+    .select("id")
+    .eq("is_active", true)
+    .single();
+  return { seasonId: season?.id ?? null, error: error?.message ?? (season ? null : "No active season") };
+}
+
+export type ScheduleEpisodeInput = {
+  weekNumber: number;
+  airsAt: string;
+  theme: string | null;
+};
+
+// Sets only week/date/theme, leaving expected_dance_count, is_elimination_week,
+// is_finale, and status untouched on an existing episode — those are owned by
+// the results-entry flow (applyEpisodeResults below), not scheduling.
+export async function applyEpisodeSchedule(
+  admin: SupabaseClient<Database>,
+  input: ScheduleEpisodeInput
+): Promise<{ error: string | null }> {
+  const { seasonId, error: seasonErr } = await getActiveSeasonId(admin);
+  if (seasonErr || !seasonId) return { error: seasonErr };
+
+  const { error } = await admin.from("episodes").upsert(
+    { season_id: seasonId, week_number: input.weekNumber, airs_at: input.airsAt, theme: input.theme },
+    { onConflict: "season_id,week_number" }
+  );
+  return { error: error?.message ?? null };
+}
+
 // Takes an already-authorized admin (service-role) client — the caller is
 // responsible for verifying access (profiles.is_super_admin or
 // resultsEntryOpenToAll()) first. Kept separate from the 'use server' action
@@ -45,18 +79,14 @@ export async function applyEpisodeResults(
   admin: SupabaseClient<Database>,
   input: EpisodeResultsInput
 ): Promise<{ error: string | null }> {
-  const { data: season, error: seasonErr } = await admin
-    .from("seasons")
-    .select("id")
-    .eq("is_active", true)
-    .single();
-  if (seasonErr || !season) return { error: seasonErr?.message ?? "No active season" };
+  const { seasonId, error: seasonErr } = await getActiveSeasonId(admin);
+  if (seasonErr || !seasonId) return { error: seasonErr };
 
   const { data: episode, error: episodeErr } = await admin
     .from("episodes")
     .upsert(
       {
-        season_id: season.id,
+        season_id: seasonId,
         week_number: input.weekNumber,
         airs_at: input.airsAt,
         theme: input.theme,
