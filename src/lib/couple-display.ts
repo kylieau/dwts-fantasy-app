@@ -73,18 +73,26 @@ export function buildPeopleDisplayNames<T extends { id: string; name: string }>(
   return result;
 }
 
-// Returns couple id -> "First & First", collision-checked within this
-// specific list of couples (so it stays correct per-season as the couples
-// pool passed in changes).
+export type CoupleNameParts = { celebrity: string; pro: string };
+
+// Returns couple id -> {celebrity, pro} display names, collision-checked
+// within this specific list of couples (so it stays correct per-season as
+// the couples pool passed in changes). Kept as separate parts rather than a
+// joined string so callers can style the celebrity name differently (the
+// show bills them as the star, the pro as their partner).
 export function buildCoupleDisplayNames<
   T extends { id: string; celebrity_name: string; pro_name: string },
->(couples: T[]): Map<string, string> {
+>(couples: T[]): Map<string, CoupleNameParts> {
   const celebMap = buildFirstNameMap(couples.map((c) => c.celebrity_name));
   const proMap = buildFirstNameMap(couples.map((c) => c.pro_name));
 
-  const result = new Map<string, string>();
+  const result = new Map<string, CoupleNameParts>();
   for (const c of couples) {
-    result.set(c.id, `${celebMap.get(c.celebrity_name)} & ${proMap.get(c.pro_name)}`);
+    result.set(c.id, { celebrity: celebMap.get(c.celebrity_name)!, pro: proMap.get(c.pro_name)! });
   }
   return result;
+}
+
+export function formatCoupleName(parts: CoupleNameParts): string {
+  return `${parts.celebrity} & ${parts.pro}`;
 }

@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { CoupleNameParts } from "@/lib/couple-display";
+import { coupleNameNode } from "@/components/couple-name";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 
@@ -34,7 +36,7 @@ export function PickEmBox({
   episode: { id: string; week_number: number } | null;
   lockAt: string | null;
   activeCouples: Couple[];
-  coupleDisplayNames: Record<string, string>;
+  coupleDisplayNames: Record<string, CoupleNameParts>;
   existingPrediction: {
     predicted_eliminated_couple_id: string | null;
     predicted_top_scorer_couple_id: string | null;
@@ -57,7 +59,10 @@ export function PickEmBox({
   const [saved, setSaved] = useState(false);
 
   const coupleItems = Object.fromEntries(
-    activeCouples.map((c) => [c.id, coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`])
+    activeCouples.map((c) => [
+      c.id,
+      coupleNameNode(coupleDisplayNames[c.id] ?? { celebrity: c.celebrity_name, pro: c.pro_name }),
+    ])
   );
 
   if (!episode) {
@@ -105,10 +110,10 @@ export function PickEmBox({
         {!isLocked ? (
           <>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Who gets eliminated?</label>
+              <label className="text-sm font-medium">Who Gets Eliminated?</label>
               <Select items={coupleItems} value={eliminatedId} onValueChange={(v) => setEliminatedId(v ?? "")}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pick a couple" />
+                  <SelectValue placeholder="Pick a Couple" />
                 </SelectTrigger>
                 <SelectContent>
                   {activeCouples.map((c) => (
@@ -120,10 +125,10 @@ export function PickEmBox({
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Who scores highest?</label>
+              <label className="text-sm font-medium">Who Scores Highest?</label>
               <Select items={coupleItems} value={topScorerId} onValueChange={(v) => setTopScorerId(v ?? "")}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pick a couple" />
+                  <SelectValue placeholder="Pick a Couple" />
                 </SelectTrigger>
                 <SelectContent>
                   {activeCouples.map((c) => (

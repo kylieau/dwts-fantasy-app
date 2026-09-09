@@ -8,7 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBrowserTimeZone, airsAtToUtcIso } from "@/lib/use-browser-time-zone";
 
-type Episode = { id: string; week_number: number; airs_at: string; theme: string | null };
+type Episode = {
+  id: string;
+  week_number: number;
+  airs_at: string;
+  theme: string | null;
+  is_elimination_week: boolean;
+  is_finale: boolean;
+};
 
 // Converts a stored UTC timestamp back into the datetime-local input format
 // (no timezone suffix, minute precision) in the viewer's own time zone.
@@ -28,6 +35,8 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
   );
   const [airsAt, setAirsAt] = useState("");
   const [theme, setTheme] = useState("");
+  const [isEliminationWeek, setIsEliminationWeek] = useState(true);
+  const [isFinale, setIsFinale] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +46,8 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
     setWeekNumber(e.week_number);
     setAirsAt(utcIsoToLocalInput(e.airs_at));
     setTheme(e.theme ?? "");
+    setIsEliminationWeek(e.is_elimination_week);
+    setIsFinale(e.is_finale);
   }
 
   function resetForm() {
@@ -46,6 +57,8 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
     );
     setAirsAt("");
     setTheme("");
+    setIsEliminationWeek(true);
+    setIsFinale(false);
   }
 
   async function handleSave() {
@@ -61,6 +74,8 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
       weekNumber,
       airsAt: airsAtUtc,
       theme: theme.trim() || null,
+      isEliminationWeek,
+      isFinale,
     });
     if (result.error) {
       setError(result.error);
@@ -74,13 +89,13 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>{editingId ? "Edit scheduled episode" : "Schedule a new episode"}</CardTitle>
+          <CardTitle>{editingId ? "Edit Scheduled Episode" : "Schedule a New Episode"}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label>Week number</Label>
+              <Label>Week Number</Label>
               <Input
                 type="number"
                 min={1}
@@ -89,7 +104,7 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Air date{browserTimeZone ? ` (${browserTimeZone})` : ""}</Label>
+              <Label>Air Date{browserTimeZone ? ` (${browserTimeZone})` : ""}</Label>
               <Input
                 type="datetime-local"
                 value={airsAt}
@@ -97,12 +112,30 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
               />
             </div>
             <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label>Theme night</Label>
+              <Label>Theme Night</Label>
               <Input
                 placeholder="e.g. Villains Night"
                 value={theme}
                 onChange={(e) => setTheme(e.target.value)}
               />
+            </div>
+            <div className="flex items-center gap-4 sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={isEliminationWeek}
+                  onChange={(e) => setIsEliminationWeek(e.target.checked)}
+                />
+                Elimination Week
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={isFinale}
+                  onChange={(e) => setIsFinale(e.target.checked)}
+                />
+                Finale
+              </label>
             </div>
           </div>
           <div className="flex gap-2">
@@ -120,7 +153,7 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Scheduled episodes</CardTitle>
+          <CardTitle>Scheduled Episodes</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {sortedEpisodes.length === 0 ? (
@@ -134,6 +167,7 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
                 <span>
                   Week {e.week_number}
                   {e.theme ? ` — ${e.theme}` : ""} — {new Date(e.airs_at).toLocaleString()}
+                  {e.is_finale ? " · Finale" : !e.is_elimination_week ? " · No elimination" : ""}
                 </span>
                 <Button variant="ghost" size="sm" onClick={() => startEdit(e)}>
                   Edit

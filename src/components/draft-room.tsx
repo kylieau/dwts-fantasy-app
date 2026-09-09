@@ -13,6 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { Database } from "@/lib/supabase/types";
+import type { CoupleNameParts } from "@/lib/couple-display";
+import { CoupleName } from "@/components/couple-name";
 
 type League = Database["public"]["Tables"]["leagues"]["Row"];
 type Member = {
@@ -42,7 +44,7 @@ export function DraftRoom({
   league: League;
   members: Member[];
   couples: Couple[];
-  coupleDisplayNames: Record<string, string>;
+  coupleDisplayNames: Record<string, CoupleNameParts>;
   initialPicks: DraftPick[];
   currentUserId: string;
 }) {
@@ -134,8 +136,10 @@ export function DraftRoom({
 
   const isCommissioner = league.commissioner_id === currentUserId;
 
-  function coupleLabel(coupleId: string) {
-    return coupleDisplayNames[coupleId] ?? "Unknown couple";
+  function coupleParts(coupleId: string): CoupleNameParts | null {
+    if (coupleDisplayNames[coupleId]) return coupleDisplayNames[coupleId];
+    const c = couples.find((c) => c.id === coupleId);
+    return c ? { celebrity: c.celebrity_name, pro: c.pro_name } : null;
   }
 
   function managerLabel(userId: string) {
@@ -290,7 +294,7 @@ export function DraftRoom({
       <div className="grid gap-6 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Available couples</CardTitle>
+            <CardTitle>Available Couples</CardTitle>
             <CardDescription>{availableCouples.length} remaining</CardDescription>
           </CardHeader>
           <CardContent className="flex max-h-96 flex-col gap-2 overflow-y-auto">
@@ -302,7 +306,7 @@ export function DraftRoom({
                 disabled={!isMyTurn || pendingCoupleId !== null}
                 onClick={() => handlePick(c.id)}
               >
-                {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
+                <CoupleName {...(coupleDisplayNames[c.id] ?? { celebrity: c.celebrity_name, pro: c.pro_name })} />
               </Button>
             ))}
           </CardContent>
@@ -310,14 +314,19 @@ export function DraftRoom({
 
         <Card>
           <CardHeader>
-            <CardTitle>Draft board</CardTitle>
+            <CardTitle>Draft Board</CardTitle>
             <CardDescription>{picks.length} picks made</CardDescription>
           </CardHeader>
           <CardContent className="flex max-h-96 flex-col gap-2 overflow-y-auto">
             {picks.map((p) => (
               <div key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
                 <span className="text-muted-foreground">#{p.pick_number}</span>
-                <span>{coupleLabel(p.couple_id)}</span>
+                <span>
+                  {(() => {
+                    const parts = coupleParts(p.couple_id);
+                    return parts ? <CoupleName {...parts} /> : "Unknown couple";
+                  })()}
+                </span>
                 <span className="text-muted-foreground">{managerLabel(p.manager_id)}</span>
               </div>
             ))}

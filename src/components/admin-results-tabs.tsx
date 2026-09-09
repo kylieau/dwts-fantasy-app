@@ -6,6 +6,7 @@ import { ResultsForm } from "@/components/results-form";
 import { AllResultsView } from "@/components/all-results-view";
 import { ScheduleManager } from "@/components/schedule-manager";
 import { JudgesDanceStylesManager } from "@/components/judges-dance-styles-manager";
+import type { CoupleNameParts } from "@/lib/couple-display";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 type Named = { id: string; name: string };
@@ -33,6 +34,7 @@ type Episode = {
   theme: string | null;
   status: string;
   is_finale: boolean;
+  is_elimination_week: boolean;
 };
 
 export function AdminResultsTabs({
@@ -49,8 +51,8 @@ export function AdminResultsTabs({
 }: {
   activeCouples: Couple[];
   allCouples: Couple[];
-  activeCoupleDisplayNames: Record<string, string>;
-  allCoupleDisplayNames: Record<string, string>;
+  activeCoupleDisplayNames: Record<string, CoupleNameParts>;
+  allCoupleDisplayNames: Record<string, CoupleNameParts>;
   judges: Named[];
   danceStyles: Named[];
   episodes: Episode[];

@@ -49,7 +49,7 @@ export default async function AdminResultsPage() {
     supabase.from("dance_styles").select("id, name").order("name"),
     supabase
       .from("episodes")
-      .select("id, week_number, airs_at, theme, status, is_finale")
+      .select("id, week_number, airs_at, theme, status, is_finale, is_elimination_week")
       .order("week_number"),
     supabase
       .from("dance_scores")

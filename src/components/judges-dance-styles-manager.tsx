@@ -61,7 +61,7 @@ export function JudgesDanceStylesManager({
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="Guest judge name"
+              placeholder="Guest Judge Name"
               value={newJudgeName}
               onChange={(e) => setNewJudgeName(e.target.value)}
             />
@@ -74,7 +74,7 @@ export function JudgesDanceStylesManager({
 
       <Card>
         <CardHeader>
-          <CardTitle>Dance styles</CardTitle>
+          <CardTitle>Dance Styles</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
@@ -86,7 +86,7 @@ export function JudgesDanceStylesManager({
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="New dance style"
+              placeholder="New Dance Style"
               value={newDanceStyleName}
               onChange={(e) => setNewDanceStyleName(e.target.value)}
             />

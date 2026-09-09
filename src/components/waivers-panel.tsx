@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { CoupleNameParts } from "@/lib/couple-display";
+import { CoupleName, coupleNameNode } from "@/components/couple-name";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 type OpenSlot = { slotNumber: number; formerCoupleName: string };
@@ -48,7 +50,7 @@ export function WaiversPanel({
   isCommissioner: boolean;
   openSlots: OpenSlot[];
   availableCouples: Couple[];
-  coupleDisplayNames: Record<string, string>;
+  coupleDisplayNames: Record<string, CoupleNameParts>;
   claims: Claim[];
 }) {
   const [selections, setSelections] = useState<Record<number, string>>({});
@@ -56,8 +58,11 @@ export function WaiversPanel({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  function coupleParts(c: Couple): CoupleNameParts {
+    return coupleDisplayNames[c.id] ?? { celebrity: c.celebrity_name, pro: c.pro_name };
+  }
   const coupleItems = Object.fromEntries(
-    availableCouples.map((c) => [c.id, coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`])
+    availableCouples.map((c) => [c.id, coupleNameNode(coupleParts(c))])
   );
 
   async function handleClaim(slotNumber: number) {
@@ -112,7 +117,7 @@ export function WaiversPanel({
       {openSlots.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Your open slots</CardTitle>
+            <CardTitle>Your Open Slots</CardTitle>
             <CardDescription>Claim a replacement from the available couples.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -129,7 +134,7 @@ export function WaiversPanel({
                   }
                 >
                   <SelectTrigger className="w-full sm:flex-1">
-                    <SelectValue placeholder="Pick a couple" />
+                    <SelectValue placeholder="Pick a Couple" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableCouples.map((c) => (
@@ -154,13 +159,13 @@ export function WaiversPanel({
 
       <Card>
         <CardHeader>
-          <CardTitle>Available couples</CardTitle>
+          <CardTitle>Available Couples</CardTitle>
           <CardDescription>{availableCouples.length} on the wire</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-1">
           {availableCouples.map((c) => (
             <p key={c.id} className="text-sm">
-              {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
+              <CoupleName {...coupleParts(c)} />
             </p>
           ))}
         </CardContent>

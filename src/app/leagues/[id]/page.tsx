@@ -12,7 +12,7 @@ import {
 import { StandingsTable } from "@/components/standings-table";
 import { RosterCard } from "@/components/roster-card";
 import { PickEmBox } from "@/components/pick-em-box";
-import { buildCoupleDisplayNames } from "@/lib/couple-display";
+import { buildCoupleDisplayNames, formatCoupleName } from "@/lib/couple-display";
 
 export default async function LeaguePage({
   params,
@@ -134,15 +134,19 @@ export default async function LeaguePage({
         .eq("episode_id", upcomingEpisode.id);
 
       const nameByManager = new Map((members ?? []).map((m) => [m.user_id, m.profiles?.display_name ?? "Unknown"]));
-      revealedPredictions = (allPredictions ?? []).map((p) => ({
-        displayName: nameByManager.get(p.manager_id) ?? "Unknown",
-        eliminatedLabel: p.predicted_eliminated_couple_id
-          ? (allDisplayNames.get(p.predicted_eliminated_couple_id) ?? null)
-          : null,
-        topScorerLabel: p.predicted_top_scorer_couple_id
-          ? (allDisplayNames.get(p.predicted_top_scorer_couple_id) ?? null)
-          : null,
-      }));
+      revealedPredictions = (allPredictions ?? []).map((p) => {
+        const eliminatedParts = p.predicted_eliminated_couple_id
+          ? allDisplayNames.get(p.predicted_eliminated_couple_id)
+          : undefined;
+        const topScorerParts = p.predicted_top_scorer_couple_id
+          ? allDisplayNames.get(p.predicted_top_scorer_couple_id)
+          : undefined;
+        return {
+          displayName: nameByManager.get(p.manager_id) ?? "Unknown",
+          eliminatedLabel: eliminatedParts ? formatCoupleName(eliminatedParts) : null,
+          topScorerLabel: topScorerParts ? formatCoupleName(topScorerParts) : null,
+        };
+      });
     }
   }
 
@@ -194,9 +198,10 @@ export default async function LeaguePage({
           couples={rosterSlots
             .filter((r) => r.couples)
             .map((r) => ({
-              displayName:
-                allDisplayNames.get(r.couple_id!) ??
-                `${r.couples!.celebrity?.name} & ${r.couples!.pro?.name}`,
+              ...(allDisplayNames.get(r.couple_id!) ?? {
+                celebrity: r.couples!.celebrity?.name ?? "Unknown",
+                pro: r.couples!.pro?.name ?? "Unknown",
+              }),
               status: r.couples!.status,
             }))}
           totalPoints={pointsByManager.get(user.id) ?? 0}

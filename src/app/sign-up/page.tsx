@@ -19,7 +19,7 @@ export default async function SignUpPage({
       {message && <p className="text-sm text-muted-foreground">{message}</p>}
       <form action={signUp} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="displayName">Display name</Label>
+          <Label htmlFor="displayName">Display Name</Label>
           <Input id="displayName" name="displayName" required />
         </div>
         <div className="flex flex-col gap-2">

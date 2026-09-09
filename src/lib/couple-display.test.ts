@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildCoupleDisplayNames, buildPeopleDisplayNames, sortJudgesForDisplay } from "./couple-display";
+import {
+  buildCoupleDisplayNames,
+  buildPeopleDisplayNames,
+  formatCoupleName,
+  sortJudgesForDisplay,
+} from "./couple-display";
 
 describe("buildCoupleDisplayNames", () => {
   it("shows first name only when there's no collision", () => {
@@ -8,8 +13,8 @@ describe("buildCoupleDisplayNames", () => {
       { id: "2", celebrity_name: "Tyler Cameron", pro_name: "Sharna Burgess" },
     ];
     const names = buildCoupleDisplayNames(couples);
-    expect(names.get("1")).toBe("Tatyana & Jan");
-    expect(names.get("2")).toBe("Tyler & Sharna");
+    expect(names.get("1")).toEqual({ celebrity: "Tatyana", pro: "Jan" });
+    expect(names.get("2")).toEqual({ celebrity: "Tyler", pro: "Sharna" });
   });
 
   it("disambiguates Connor/Conner with a last initial despite different spelling", () => {
@@ -18,8 +23,8 @@ describe("buildCoupleDisplayNames", () => {
       { id: "2", celebrity_name: "Connor Wood", pro_name: "Rylee Arnold" },
     ];
     const names = buildCoupleDisplayNames(couples);
-    expect(names.get("1")).toBe("Conner L. & Adele");
-    expect(names.get("2")).toBe("Connor W. & Rylee");
+    expect(names.get("1")).toEqual({ celebrity: "Conner L.", pro: "Adele" });
+    expect(names.get("2")).toEqual({ celebrity: "Connor W.", pro: "Rylee" });
   });
 
   it("keeps a known compound first name together instead of splitting on whitespace", () => {
@@ -27,7 +32,7 @@ describe("buildCoupleDisplayNames", () => {
       { id: "1", celebrity_name: "Sarah Jane Nader", pro_name: "Hailey Bills" },
     ];
     const names = buildCoupleDisplayNames(couples);
-    expect(names.get("1")).toBe("Sarah Jane & Hailey");
+    expect(names.get("1")).toEqual({ celebrity: "Sarah Jane", pro: "Hailey" });
   });
 
   it("disambiguates an exact first-name collision", () => {
@@ -36,8 +41,8 @@ describe("buildCoupleDisplayNames", () => {
       { id: "2", celebrity_name: "Jordan Chiles", pro_name: "Val Chmerkovskiy" },
     ];
     const names = buildCoupleDisplayNames(couples);
-    expect(names.get("1")).toBe("Jordan S. & Alan");
-    expect(names.get("2")).toBe("Jordan C. & Val");
+    expect(names.get("1")).toEqual({ celebrity: "Jordan S.", pro: "Alan" });
+    expect(names.get("2")).toEqual({ celebrity: "Jordan C.", pro: "Val" });
   });
 
   it("checks celebrity and pro pools independently", () => {
@@ -48,8 +53,14 @@ describe("buildCoupleDisplayNames", () => {
       { id: "2", celebrity_name: "Alex Jones", pro_name: "Emma Slater" },
     ];
     const names = buildCoupleDisplayNames(couples);
-    expect(names.get("1")).toBe("Alex S. & Witney");
-    expect(names.get("2")).toBe("Alex J. & Emma");
+    expect(names.get("1")).toEqual({ celebrity: "Alex S.", pro: "Witney" });
+    expect(names.get("2")).toEqual({ celebrity: "Alex J.", pro: "Emma" });
+  });
+});
+
+describe("formatCoupleName", () => {
+  it("joins celebrity and pro with an ampersand", () => {
+    expect(formatCoupleName({ celebrity: "Tatyana", pro: "Jan" })).toBe("Tatyana & Jan");
   });
 });
 

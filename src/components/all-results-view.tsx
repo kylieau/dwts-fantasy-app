@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildPeopleDisplayNames } from "@/lib/couple-display";
+import { buildPeopleDisplayNames, type CoupleNameParts } from "@/lib/couple-display";
+import { CoupleName } from "@/components/couple-name";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 type Named = { id: string; name: string };
@@ -48,7 +49,7 @@ export function AllResultsView({
   judgeScores: JudgeScore[];
   episodeResults: EpisodeResult[];
   couples: Couple[];
-  coupleDisplayNames: Record<string, string>;
+  coupleDisplayNames: Record<string, CoupleNameParts>;
   judges: Named[];
   danceStyles: Named[];
 }) {
@@ -56,6 +57,13 @@ export function AllResultsView({
 
   const danceStyleById = new Map(danceStyles.map((d) => [d.id, d.name]));
   const judgeById = buildPeopleDisplayNames(judges);
+  const couplesById = new Map(couples.map((c) => [c.id, c]));
+
+  function coupleParts(coupleId: string): CoupleNameParts | null {
+    if (coupleDisplayNames[coupleId]) return coupleDisplayNames[coupleId];
+    const c = couplesById.get(coupleId);
+    return c ? { celebrity: c.celebrity_name, pro: c.pro_name } : null;
+  }
 
   const judgeScoresByDance = new Map<string, JudgeScore[]>();
   for (const js of judgeScores) {
@@ -138,6 +146,7 @@ export function AllResultsView({
               .filter((r) => r.episode_id === ep.id)
               .map((r) => ({
                 ...r,
+                parts: coupleParts(r.couple_id),
                 dances: danceScoresByEpisodeCouple.get(`${ep.id}:${r.couple_id}`) ?? [],
                 total: (danceScoresByEpisodeCouple.get(`${ep.id}:${r.couple_id}`) ?? []).reduce(
                   (sum, d) => sum + d.total_score,
@@ -162,7 +171,7 @@ export function AllResultsView({
                   {results.map((r) => (
                     <div key={r.couple_id} className="flex flex-col gap-0.5">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
-                        <span>{coupleDisplayNames[r.couple_id] ?? "Unknown"}</span>
+                        <span>{r.parts ? <CoupleName {...r.parts} /> : "Unknown"}</span>
                         <span className="text-muted-foreground">
                           {r.total} pts · {r.outcome.replace("_", " ")}
                           {noteLabel(r) ? ` · ${noteLabel(r)}` : ""}
@@ -198,7 +207,9 @@ export function AllResultsView({
           return (
             <Card key={c.id}>
               <CardHeader>
-                <CardTitle>{coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}</CardTitle>
+                <CardTitle>
+                  <CoupleName {...(coupleDisplayNames[c.id] ?? { celebrity: c.celebrity_name, pro: c.pro_name })} />
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
                 {history.map((h, i) => (

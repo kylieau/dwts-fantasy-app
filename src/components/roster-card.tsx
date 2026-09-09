@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { CoupleNameParts } from "@/lib/couple-display";
+import { CoupleName } from "@/components/couple-name";
 
-type RosterCouple = { displayName: string; status: string };
+type RosterCouple = CoupleNameParts & { status: string };
 
 export function RosterCard({
   couples,
@@ -12,13 +14,15 @@ export function RosterCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your roster</CardTitle>
+        <CardTitle>Your Roster</CardTitle>
         <CardDescription>{totalPoints} points this season</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {couples.map((c, i) => (
           <div key={i} className="flex items-center justify-between text-sm">
-            <span>{c.displayName}</span>
+            <span>
+              <CoupleName celebrity={c.celebrity} pro={c.pro} />
+            </span>
             <span
               className={
                 c.status === "eliminated" ? "text-muted-foreground" : "text-foreground"

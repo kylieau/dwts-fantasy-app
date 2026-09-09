@@ -75,7 +75,7 @@ export default async function LeagueSettingsPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>League settings</CardTitle>
+          <CardTitle>League Settings</CardTitle>
           <CardDescription>
             Waivers and draft timing. Roster size is set automatically when the
             draft starts (couples ÷ members).
@@ -84,7 +84,7 @@ export default async function LeagueSettingsPage({
         <CardContent>
           <form action={boundUpdateLeagueSettings} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="waiverMode">Waiver mode</Label>
+              <Label htmlFor="waiverMode">Waiver Mode</Label>
               <Select
                 name="waiverMode"
                 items={{ locked: "Locked (no waivers)", waivers: "Waivers enabled" }}
@@ -102,7 +102,7 @@ export default async function LeagueSettingsPage({
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="waiverClaimMethod">
-                Waiver claim method (only used when waivers are enabled)
+                Waiver Claim Method (Only Used When Waivers Are Enabled)
               </Label>
               <Select
                 name="waiverClaimMethod"
@@ -125,7 +125,7 @@ export default async function LeagueSettingsPage({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="pickTimeLimitSeconds">Draft pick timer (seconds)</Label>
+              <Label htmlFor="pickTimeLimitSeconds">Draft Pick Timer (Seconds)</Label>
               <Input
                 id="pickTimeLimitSeconds"
                 name="pickTimeLimitSeconds"
@@ -138,7 +138,7 @@ export default async function LeagueSettingsPage({
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="predictionLockHoursBeforeAir">
-                Pick &apos;Em lock (hours before air)
+                Pick &apos;Em Lock (Hours Before Air)
               </Label>
               <Input
                 id="predictionLockHoursBeforeAir"
@@ -158,14 +158,14 @@ export default async function LeagueSettingsPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Scoring settings</CardTitle>
+          <CardTitle>Scoring Settings</CardTitle>
           <CardDescription>How points are awarded each week.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={boundUpdateScoringSettings} className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="judgesScoreMultiplier">Judges&apos; score multiplier</Label>
+                <Label htmlFor="judgesScoreMultiplier">Judges&apos; Score Multiplier</Label>
                 <Input
                   id="judgesScoreMultiplier"
                   name="judgesScoreMultiplier"
@@ -177,7 +177,7 @@ export default async function LeagueSettingsPage({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="survivalPoints">Survival points</Label>
+                <Label htmlFor="survivalPoints">Survival Points</Label>
                 <Input
                   id="survivalPoints"
                   name="survivalPoints"
@@ -189,7 +189,7 @@ export default async function LeagueSettingsPage({
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="eliminationPredictionPoints">
-                  Elimination prediction points
+                  Elimination Prediction Points
                 </Label>
                 <Input
                   id="eliminationPredictionPoints"
@@ -202,7 +202,7 @@ export default async function LeagueSettingsPage({
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="topScorerPredictionPoints">
-                  Top scorer prediction points
+                  Top Scorer Prediction Points
                 </Label>
                 <Input
                   id="topScorerPredictionPoints"
@@ -214,7 +214,7 @@ export default async function LeagueSettingsPage({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="firstPlacePoints">1st place bonus</Label>
+                <Label htmlFor="firstPlacePoints">1st Place Bonus</Label>
                 <Input
                   id="firstPlacePoints"
                   name="firstPlacePoints"
@@ -225,7 +225,7 @@ export default async function LeagueSettingsPage({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="secondPlacePoints">2nd place bonus</Label>
+                <Label htmlFor="secondPlacePoints">2nd Place Bonus</Label>
                 <Input
                   id="secondPlacePoints"
                   name="secondPlacePoints"
@@ -236,7 +236,7 @@ export default async function LeagueSettingsPage({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="thirdPlacePoints">3rd place bonus</Label>
+                <Label htmlFor="thirdPlacePoints">3rd Place Bonus</Label>
                 <Input
                   id="thirdPlacePoints"
                   name="thirdPlacePoints"

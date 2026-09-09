@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { WaiversPanel } from "@/components/waivers-panel";
-import { buildCoupleDisplayNames } from "@/lib/couple-display";
+import { buildCoupleDisplayNames, formatCoupleName } from "@/lib/couple-display";
 
 export default async function WaiversPage({
   params,
@@ -76,9 +76,12 @@ export default async function WaiversPage({
     .filter((s) => s.couples?.status === "eliminated" || s.couples?.status === "withdrawn")
     .map((s) => ({
       slotNumber: s.slot_number,
-      formerCoupleName:
-        displayNames.get(s.couples!.id) ??
-        `${s.couples!.celebrity?.name} & ${s.couples!.pro?.name}`,
+      formerCoupleName: formatCoupleName(
+        displayNames.get(s.couples!.id) ?? {
+          celebrity: s.couples!.celebrity?.name ?? "Unknown",
+          pro: s.couples!.pro?.name ?? "Unknown",
+        }
+      ),
     }));
 
   const rosteredCoupleIds = new Set((rosteredSlots ?? []).map((s) => s.couple_id));
@@ -98,7 +101,12 @@ export default async function WaiversPage({
         id: c.id,
         managerName: c.profiles?.display_name ?? "Unknown",
         coupleName: c.couples
-          ? (displayNames.get(c.couple_id) ?? `${c.couples.celebrity?.name} & ${c.couples.pro?.name}`)
+          ? formatCoupleName(
+              displayNames.get(c.couple_id) ?? {
+                celebrity: c.couples.celebrity?.name ?? "Unknown",
+                pro: c.couples.pro?.name ?? "Unknown",
+              }
+            )
           : "Unknown",
         slotNumber: c.slot_number,
         status: c.status,

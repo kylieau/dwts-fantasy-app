@@ -13,11 +13,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildPeopleDisplayNames } from "@/lib/couple-display";
+import { buildPeopleDisplayNames, type CoupleNameParts } from "@/lib/couple-display";
+import { CoupleName, coupleNameNode } from "@/components/couple-name";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 type Named = { id: string; name: string };
-type ScheduledEpisode = { id: string; week_number: number; airs_at: string; theme: string | null };
+type ScheduledEpisode = {
+  id: string;
+  week_number: number;
+  airs_at: string;
+  theme: string | null;
+  is_elimination_week: boolean;
+  is_finale: boolean;
+};
 type Outcome = "safe" | "eliminated" | "withdrawn" | "bye" | "winner" | "runner_up" | "third_place";
 
 type SubmittedDance = {
@@ -78,7 +86,7 @@ export function ResultsForm({
   episodes,
 }: {
   couples: Couple[];
-  coupleDisplayNames: Record<string, string>;
+  coupleDisplayNames: Record<string, CoupleNameParts>;
   judges: Named[];
   danceStyles: Named[];
   episodes: ScheduledEpisode[];
@@ -92,9 +100,9 @@ export function ResultsForm({
   // selectedEpisode being non-null, so the sentinel is never actually acted on.
   const weekNumber = selectedEpisode?.week_number ?? 0;
 
+  const isFinale = selectedEpisode?.is_finale ?? false;
+
   const [expectedDanceCount, setExpectedDanceCount] = useState(1);
-  const [isEliminationWeek, setIsEliminationWeek] = useState(true);
-  const [isFinale, setIsFinale] = useState(false);
   const [selectedJudgeIds, setSelectedJudgeIds] = useState<Set<string>>(
     () => new Set(judges.map((j) => j.id))
   );
@@ -119,14 +127,17 @@ export function ResultsForm({
     return sum + (Number.isNaN(n) ? 0 : n);
   }, 0);
 
-  const coupleItems = Object.fromEntries(
-    couples.map((c) => [c.id, coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`])
-  );
+  function coupleParts(c: Couple): CoupleNameParts {
+    return coupleDisplayNames[c.id] ?? { celebrity: c.celebrity_name, pro: c.pro_name };
+  }
+  const coupleItems = Object.fromEntries(couples.map((c) => [c.id, coupleNameNode(coupleParts(c))]));
   const danceStyleItems = Object.fromEntries(danceStyles.map((d) => [d.id, d.name]));
   const episodeItems = Object.fromEntries(
     sortedEpisodes.map((e) => [
       e.id,
-      `Week ${e.week_number}${e.theme ? ` — ${e.theme}` : ""} — ${new Date(e.airs_at).toLocaleDateString()}`,
+      `Week ${e.week_number}${e.theme ? ` — ${e.theme}` : ""} — ${new Date(e.airs_at).toLocaleDateString()}${
+        e.is_finale ? " · Finale" : !e.is_elimination_week ? " · No elimination" : ""
+      }`,
     ])
   );
   const judgeDisplayNames = buildPeopleDisplayNames(judges);
@@ -272,8 +283,6 @@ export function ResultsForm({
       airsAt: selectedEpisode.airs_at,
       theme: selectedEpisode.theme,
       expectedDanceCount,
-      isEliminationWeek,
-      isFinale,
       entries,
     });
 
@@ -320,7 +329,7 @@ export function ResultsForm({
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2 sm:col-span-2">
-            <Label>Scheduled episode</Label>
+            <Label>Scheduled Episode</Label>
             {sortedEpisodes.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No episodes scheduled yet — add one under the Set Schedule tab first.
@@ -335,7 +344,7 @@ export function ResultsForm({
                 }}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a week" />
+                  <SelectValue placeholder="Select a Week" />
                 </SelectTrigger>
                 <SelectContent>
                   {sortedEpisodes.map((e) => (
@@ -350,16 +359,26 @@ export function ResultsForm({
           {selectedEpisode && (
             <>
               <div className="flex flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">Week number</Label>
+                <Label className="text-xs text-muted-foreground">Week Number</Label>
                 <p className="text-sm">{selectedEpisode.week_number}</p>
               </div>
               <div className="flex flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">Air date</Label>
+                <Label className="text-xs text-muted-foreground">Air Date</Label>
                 <p className="text-sm">{new Date(selectedEpisode.airs_at).toLocaleString()}</p>
               </div>
-              <div className="flex flex-col gap-1 sm:col-span-2">
+              <div className="flex flex-col gap-1">
                 <Label className="text-xs text-muted-foreground">Theme</Label>
                 <p className="text-sm">{selectedEpisode.theme ?? "—"}</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Elimination / Finale</Label>
+                <p className="text-sm">
+                  {selectedEpisode.is_finale
+                    ? "Finale"
+                    : selectedEpisode.is_elimination_week
+                      ? "Elimination week"
+                      : "No elimination"}
+                </p>
               </div>
             </>
           )}
@@ -374,30 +393,6 @@ export function ResultsForm({
                 setExpectedDanceCount(Number(e.target.value));
               }}
             />
-          </div>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isEliminationWeek}
-                onChange={(e) => {
-                  setOverviewConfirmed(false);
-                  setIsEliminationWeek(e.target.checked);
-                }}
-              />
-              Elimination week
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isFinale}
-                onChange={(e) => {
-                  setOverviewConfirmed(false);
-                  setIsFinale(e.target.checked);
-                }}
-              />
-              Finale
-            </label>
           </div>
           <div className="flex flex-col gap-2 sm:col-span-2">
             <Label>Judges</Label>
@@ -475,7 +470,7 @@ export function ResultsForm({
                   onValueChange={(v) => setSelectedDanceStyleId(v ?? "")}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Dance style" />
+                    <SelectValue placeholder="Dance Style" />
                   </SelectTrigger>
                   <SelectContent>
                     {danceStyles.map((d) => (
@@ -551,13 +546,15 @@ export function ResultsForm({
                     danceStyles.find((s) => s.id === d.danceStyleId)?.name ?? "Unknown";
                   const total = d.judgeScores.reduce((sum, js) => sum + js.score, 0);
                   const weekMismatch = d.weekNumber !== weekNumber;
+                  const danceCouple = couples.find((c) => c.id === d.coupleId);
                   return (
                     <div
                       key={d.key}
                       className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm"
                     >
                       <span className={weekMismatch ? "text-destructive" : undefined}>
-                        Week {d.weekNumber} — {coupleDisplayNames[d.coupleId] ?? "Unknown"} —{" "}
+                        Week {d.weekNumber} —{" "}
+                        {danceCouple ? <CoupleName {...coupleParts(danceCouple)} /> : "Unknown"} —{" "}
                         {styleName}: {total}
                       </span>
                       <Button variant="ghost" size="sm" onClick={() => startEditDanceSubmission(d)}>
@@ -592,7 +589,7 @@ export function ResultsForm({
                     return (
                       <tr key={c.id} className="border-b border-border last:border-b-0">
                         <td className="whitespace-nowrap p-2">
-                          {coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}
+                          <CoupleName {...coupleParts(c)} />
                         </td>
                         {visibleBucketColumns.map((col) => (
                           <td key={col.key} className="p-2 text-center">

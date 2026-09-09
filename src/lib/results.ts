@@ -24,8 +24,6 @@ export type EpisodeResultsInput = {
   airsAt: string;
   theme: string | null;
   expectedDanceCount: number;
-  isEliminationWeek: boolean;
-  isFinale: boolean;
   entries: EntrySubmission[];
 };
 
@@ -52,11 +50,13 @@ export type ScheduleEpisodeInput = {
   weekNumber: number;
   airsAt: string;
   theme: string | null;
+  isEliminationWeek: boolean;
+  isFinale: boolean;
 };
 
-// Sets only week/date/theme, leaving expected_dance_count, is_elimination_week,
-// is_finale, and status untouched on an existing episode — those are owned by
-// the results-entry flow (applyEpisodeResults below), not scheduling.
+// Sets week/date/theme/elimination-week/finale — everything known ahead of
+// air — leaving expected_dance_count and status untouched on an existing
+// episode, since those are owned by the results-entry flow below.
 export async function applyEpisodeSchedule(
   admin: SupabaseClient<Database>,
   input: ScheduleEpisodeInput
@@ -65,7 +65,14 @@ export async function applyEpisodeSchedule(
   if (seasonErr || !seasonId) return { error: seasonErr };
 
   const { error } = await admin.from("episodes").upsert(
-    { season_id: seasonId, week_number: input.weekNumber, airs_at: input.airsAt, theme: input.theme },
+    {
+      season_id: seasonId,
+      week_number: input.weekNumber,
+      airs_at: input.airsAt,
+      theme: input.theme,
+      is_elimination_week: input.isEliminationWeek,
+      is_finale: input.isFinale,
+    },
     { onConflict: "season_id,week_number" }
   );
   return { error: error?.message ?? null };
@@ -91,8 +98,6 @@ export async function applyEpisodeResults(
         airs_at: input.airsAt,
         theme: input.theme,
         expected_dance_count: input.expectedDanceCount,
-        is_elimination_week: input.isEliminationWeek,
-        is_finale: input.isFinale,
         // Submitting with no couple entries just schedules the episode (sets
         // its air/lock time) ahead of air — that's how a manager gets
         // something to predict against before results exist. Adding entries
@@ -221,7 +226,7 @@ export async function applyEpisodeResults(
         predictedEliminatedCoupleId: p.predicted_eliminated_couple_id,
         predictedTopScorerCoupleId: p.predicted_top_scorer_couple_id,
       })),
-      isFinale: input.isFinale,
+      isFinale: episode.is_finale,
     });
 
     if (scores.length === 0) continue;

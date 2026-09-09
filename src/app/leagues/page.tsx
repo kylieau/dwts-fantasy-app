@@ -63,7 +63,7 @@ export default async function LeaguesPage({
       <div className="grid gap-6 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Create a league</CardTitle>
+            <CardTitle>Create a League</CardTitle>
             <CardDescription>
               You&apos;ll be the commissioner and get an invite code to share.
             </CardDescription>
@@ -71,7 +71,7 @@ export default async function LeaguesPage({
           <CardContent>
             <form action={createLeague} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="name">League name</Label>
+                <Label htmlFor="name">League Name</Label>
                 <Input id="name" name="name" required />
               </div>
               <Button type="submit">Create league</Button>
@@ -81,7 +81,7 @@ export default async function LeaguesPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Join a league</CardTitle>
+            <CardTitle>Join a League</CardTitle>
             <CardDescription>
               Enter the 6-character invite code from your commissioner.
             </CardDescription>
@@ -89,7 +89,7 @@ export default async function LeaguesPage({
           <CardContent>
             <form action={joinLeague} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="inviteCode">Invite code</Label>
+                <Label htmlFor="inviteCode">Invite Code</Label>
                 <Input
                   id="inviteCode"
                   name="inviteCode"

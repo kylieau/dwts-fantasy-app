@@ -26,7 +26,7 @@ export function LeagueSwitcher({
       onValueChange={(id) => router.push(`/leagues/${id}`)}
     >
       <SelectTrigger size="sm" className="w-28 sm:w-40">
-        <SelectValue placeholder="Your leagues" />
+        <SelectValue placeholder="Your Leagues" />
       </SelectTrigger>
       <SelectContent>
         {leagues.map((league) => (
