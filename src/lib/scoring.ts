@@ -24,6 +24,7 @@ export type Outcome =
 export type EpisodeOutcome = {
   coupleId: string;
   outcome: Outcome;
+  bonusPoints: number;
 };
 
 export type Prediction = {
@@ -79,6 +80,7 @@ export function computeWeeklyScores({
   }
 
   const outcomeByCouple = new Map(episodeOutcomes.map((o) => [o.coupleId, o.outcome]));
+  const bonusPointsByCouple = new Map(episodeOutcomes.map((o) => [o.coupleId, o.bonusPoints]));
 
   const highestScore = Math.max(0, ...coupleTotalScore.values());
   const topScorerCoupleIds = new Set(
@@ -103,6 +105,8 @@ export function computeWeeklyScores({
     if (isFinale && outcome && outcome in PODIUM_POINTS_KEY) {
       points += scoringSettings[PODIUM_POINTS_KEY[outcome]];
     }
+
+    points += bonusPointsByCouple.get(coupleId) ?? 0;
 
     rosterPointsByManager.set(managerId, (rosterPointsByManager.get(managerId) ?? 0) + points);
   }

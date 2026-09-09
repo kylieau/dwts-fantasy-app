@@ -44,6 +44,7 @@ type Buckets = {
   bottomThree: boolean;
   judgesSave: boolean;
   teamDance: boolean;
+  immunity: boolean;
   winner: boolean;
   runnerUp: boolean;
   thirdPlace: boolean;
@@ -58,16 +59,24 @@ function emptyBuckets(): Buckets {
     bottomThree: false,
     judgesSave: false,
     teamDance: false,
+    immunity: false,
     winner: false,
     runnerUp: false,
     thirdPlace: false,
   };
 }
 
+type Bonus = { points: number; note: string };
+
+function emptyBonus(): Bonus {
+  return { points: 0, note: "" };
+}
+
 // Primary status buckets are mutually exclusive by priority (a couple marked
 // both Eliminated and Winner is a data-entry mistake, not a valid state) —
-// Bottom 2/3, Judges' Save, and Team Dance are independent notes layered on
-// top and don't affect this. Anyone with no primary bucket checked is Safe.
+// Bottom 2/3, Judges' Save, Team Dance, and Immunity are independent notes
+// layered on top and don't affect this. Anyone with no primary bucket checked
+// is Safe.
 function computeOutcome(b: Buckets, isFinale: boolean): Outcome {
   if (b.eliminated) return "eliminated";
   if (b.withdrawn) return "withdrawn";
@@ -107,13 +116,16 @@ export function ResultsForm({
     () => new Set(judges.map((j) => j.id))
   );
 
+  const [isTeamDanceEntry, setIsTeamDanceEntry] = useState(false);
   const [selectedCoupleId, setSelectedCoupleId] = useState("");
+  const [selectedTeamCoupleIds, setSelectedTeamCoupleIds] = useState<Set<string>>(new Set());
   const [selectedDanceStyleId, setSelectedDanceStyleId] = useState("");
   const [judgeScoreInputs, setJudgeScoreInputs] = useState<Record<string, string>>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
 
   const [submittedDances, setSubmittedDances] = useState<SubmittedDance[]>([]);
   const [bucketsByWeek, setBucketsByWeek] = useState<Record<number, Record<string, Buckets>>>({});
+  const [bonusByWeek, setBonusByWeek] = useState<Record<number, Record<string, Bonus>>>({});
 
   const [overviewConfirmed, setOverviewConfirmed] = useState(false);
 
@@ -156,6 +168,10 @@ export function ResultsForm({
   const dancesForOtherWeeks = submittedDances.filter((d) => d.weekNumber !== weekNumber);
 
   const buckets = bucketsByWeek[weekNumber] ?? Object.fromEntries(couples.map((c) => [c.id, emptyBuckets()]));
+  const bonus = bonusByWeek[weekNumber] ?? {};
+  function bonusFor(coupleId: string): Bonus {
+    return bonus[coupleId] ?? emptyBonus();
+  }
 
   function toggleJudge(judgeId: string) {
     setOverviewConfirmed(false);
@@ -167,13 +183,22 @@ export function ResultsForm({
     });
   }
 
+  function toggleTeamCouple(coupleId: string) {
+    setSelectedTeamCoupleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(coupleId)) next.delete(coupleId);
+      else next.add(coupleId);
+      return next;
+    });
+  }
+
   function submitDanceEntry() {
-    if (!selectedCoupleId || !selectedDanceStyleId) return;
     const judgeScores = activeJudges
       .map((j) => ({ judgeId: j.id, score: Number(judgeScoreInputs[j.id]) }))
       .filter((js) => !Number.isNaN(js.score));
 
     if (editingKey) {
+      if (!selectedCoupleId || !selectedDanceStyleId) return;
       setSubmittedDances((prev) =>
         prev.map((d) =>
           d.key === editingKey
@@ -188,7 +213,21 @@ export function ResultsForm({
         )
       );
       setEditingKey(null);
+    } else if (isTeamDanceEntry) {
+      if (selectedTeamCoupleIds.size === 0 || !selectedDanceStyleId) return;
+      setSubmittedDances((prev) => [
+        ...prev,
+        ...[...selectedTeamCoupleIds].map((coupleId) => ({
+          key: `${Date.now()}-${Math.random()}-${coupleId}`,
+          weekNumber,
+          coupleId,
+          danceStyleId: selectedDanceStyleId,
+          judgeScores,
+        })),
+      ]);
+      setSelectedTeamCoupleIds(new Set());
     } else {
+      if (!selectedCoupleId || !selectedDanceStyleId) return;
       setSubmittedDances((prev) => [
         ...prev,
         {
@@ -208,6 +247,8 @@ export function ResultsForm({
   function startEditDanceSubmission(d: SubmittedDance) {
     const episodeForDance = sortedEpisodes.find((e) => e.week_number === d.weekNumber);
     if (episodeForDance) setSelectedEpisodeId(episodeForDance.id);
+    setIsTeamDanceEntry(false);
+    setSelectedTeamCoupleIds(new Set());
     setEditingKey(d.key);
     setSelectedCoupleId(d.coupleId);
     setSelectedDanceStyleId(d.danceStyleId);
@@ -239,6 +280,22 @@ export function ResultsForm({
     });
   }
 
+  function setBonusPoints(coupleId: string, points: number) {
+    setBonusByWeek((prev) => {
+      const week = prev[weekNumber] ?? {};
+      const current = week[coupleId] ?? emptyBonus();
+      return { ...prev, [weekNumber]: { ...week, [coupleId]: { ...current, points } } };
+    });
+  }
+
+  function setBonusNote(coupleId: string, note: string) {
+    setBonusByWeek((prev) => {
+      const week = prev[weekNumber] ?? {};
+      const current = week[coupleId] ?? emptyBonus();
+      return { ...prev, [weekNumber]: { ...week, [coupleId]: { ...current, note } } };
+    });
+  }
+
   async function handleSubmit() {
     setError(null);
     setSuccess(false);
@@ -256,6 +313,7 @@ export function ResultsForm({
           .filter((d) => d.coupleId === c.id)
           .map((d) => ({ danceStyleId: d.danceStyleId, judgeScores: d.judgeScores }));
         const b = buckets[c.id] ?? emptyBuckets();
+        const couplesBonus = bonusFor(c.id);
         return {
           coupleId: c.id,
           dances,
@@ -264,10 +322,14 @@ export function ResultsForm({
           wasBottomThree: b.bottomThree,
           savedByJudges: b.judgesSave,
           wasTeamDance: b.teamDance,
+          hadImmunity: b.immunity,
+          bonusPoints: couplesBonus.points,
+          bonusNote: couplesBonus.note.trim() || null,
         };
       })
-      // Skip couples nobody touched this week (no dances, no bucket, still
-      // default Safe) — e.g. someone eliminated weeks ago sitting in the list.
+      // Skip couples nobody touched this week (no dances, no bucket, no
+      // bonus, still default Safe) — e.g. someone eliminated weeks ago
+      // sitting in the list.
       .filter(
         (e) =>
           e.dances.length > 0 ||
@@ -275,7 +337,9 @@ export function ResultsForm({
           e.wasBottomTwo ||
           e.wasBottomThree ||
           e.savedByJudges ||
-          e.wasTeamDance
+          e.wasTeamDance ||
+          e.hadImmunity ||
+          e.bonusPoints !== 0
       );
 
     const result = await submitEpisodeResults({
@@ -302,6 +366,7 @@ export function ResultsForm({
     { key: "bottomThree", label: "Bottom 3" },
     { key: "judgesSave", label: "Judges' Save" },
     { key: "teamDance", label: "Team Dance" },
+    { key: "immunity", label: "Immunity" },
     { key: "winner", label: "Winner", finaleOnly: true },
     { key: "runnerUp", label: "Runner-up", finaleOnly: true },
     { key: "thirdPlace", label: "Third place", finaleOnly: true },
@@ -437,23 +502,55 @@ export function ResultsForm({
               <CardTitle>Enter Dance Results — Week {weekNumber}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
+              {!editingKey && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={isTeamDanceEntry}
+                    onChange={(e) => {
+                      setIsTeamDanceEntry(e.target.checked);
+                      setSelectedCoupleId("");
+                      setSelectedTeamCoupleIds(new Set());
+                    }}
+                  />
+                  Team Dance (one combined score for several couples)
+                </label>
+              )}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Select
-                  items={coupleItems}
-                  value={selectedCoupleId}
-                  onValueChange={(v) => setSelectedCoupleId(v ?? "")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Couple" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableCouples.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {coupleItems[c.id]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isTeamDanceEntry ? (
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-xs text-muted-foreground">Couples on this team</Label>
+                    <div className="flex flex-wrap gap-3">
+                      {availableCouples.map((c) => (
+                        <label key={c.id} className="flex items-center gap-1 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={selectedTeamCoupleIds.has(c.id)}
+                            onChange={() => toggleTeamCouple(c.id)}
+                          />
+                          <CoupleName {...coupleParts(c)} />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <Select
+                    items={coupleItems}
+                    value={selectedCoupleId}
+                    onValueChange={(v) => setSelectedCoupleId(v ?? "")}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Couple" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCouples.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {coupleItems[c.id]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <Select
                   items={danceStyleItems}
                   value={selectedDanceStyleId}
@@ -494,7 +591,11 @@ export function ResultsForm({
                 <Button
                   size="sm"
                   onClick={submitDanceEntry}
-                  disabled={!selectedCoupleId || !selectedDanceStyleId}
+                  disabled={
+                    (isTeamDanceEntry && !editingKey
+                      ? selectedTeamCoupleIds.size === 0
+                      : !selectedCoupleId) || !selectedDanceStyleId
+                  }
                 >
                   {editingKey ? "Save changes" : "Submit"}
                 </Button>
@@ -571,11 +672,14 @@ export function ResultsForm({
                         {col.label}
                       </th>
                     ))}
+                    <th className="whitespace-nowrap p-2 text-center">Bonus Pts</th>
+                    <th className="whitespace-nowrap p-2 text-center">Bonus Note</th>
                   </tr>
                 </thead>
                 <tbody>
                   {couples.map((c) => {
                     const coupleBuckets = buckets[c.id] ?? emptyBuckets();
+                    const coupleBonus = bonusFor(c.id);
                     return (
                       <tr key={c.id} className="border-b border-border last:border-b-0">
                         <td className="whitespace-nowrap p-2">
@@ -590,13 +694,31 @@ export function ResultsForm({
                             />
                           </td>
                         ))}
+                        <td className="p-2 text-center">
+                          <Input
+                            type="number"
+                            className="w-16"
+                            value={coupleBonus.points}
+                            onChange={(e) => setBonusPoints(c.id, Number(e.target.value))}
+                          />
+                        </td>
+                        <td className="p-2 text-center">
+                          <Input
+                            className="w-32"
+                            placeholder="e.g. Dance-off win"
+                            value={coupleBonus.note}
+                            onChange={(e) => setBonusNote(c.id, e.target.value)}
+                          />
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
               <p className="pt-2 text-xs text-muted-foreground">
-                A couple with no box checked is Safe.
+                A couple with no box checked is Safe. Bonus points add directly
+                to that couple&apos;s weekly score — use for dance-off wins,
+                relay wins, or anything else that doesn&apos;t fit a checkbox.
               </p>
             </CardContent>
           </Card>

@@ -58,7 +58,7 @@ export default async function AdminResultsPage() {
     supabase
       .from("episode_results")
       .select(
-        "episode_id, couple_id, outcome, was_bottom_two, was_bottom_three, saved_by_judges, was_team_dance"
+        "episode_id, couple_id, outcome, was_bottom_two, was_bottom_three, saved_by_judges, was_team_dance, had_immunity, bonus_points, bonus_note"
       ),
   ]);
 

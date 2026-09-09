@@ -26,6 +26,9 @@ type EpisodeResult = {
   was_bottom_three: boolean;
   saved_by_judges: boolean;
   was_team_dance: boolean;
+  had_immunity: boolean;
+  bonus_points: number;
+  bonus_note: string | null;
 };
 type Episode = {
   id: string;

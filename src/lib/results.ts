@@ -17,6 +17,9 @@ export type EntrySubmission = {
   wasBottomThree: boolean;
   savedByJudges: boolean;
   wasTeamDance: boolean;
+  hadImmunity: boolean;
+  bonusPoints: number;
+  bonusNote: string | null;
 };
 
 export type EpisodeResultsInput = {
@@ -157,6 +160,9 @@ export async function applyEpisodeResults(
     was_bottom_three: e.wasBottomThree,
     saved_by_judges: e.savedByJudges,
     was_team_dance: e.wasTeamDance,
+    had_immunity: e.hadImmunity,
+    bonus_points: e.bonusPoints,
+    bonus_note: e.bonusNote,
   }));
   if (outcomeRows.length > 0) {
     const { error } = await admin.from("episode_results").insert(outcomeRows);
@@ -186,6 +192,7 @@ export async function applyEpisodeResults(
   const episodeOutcomeInputs = outcomeRows.map((r) => ({
     coupleId: r.couple_id,
     outcome: r.outcome,
+    bonusPoints: r.bonus_points,
   }));
 
   for (const league of leagues ?? []) {

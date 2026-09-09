@@ -24,8 +24,8 @@ describe("computeWeeklyScores", () => {
         { coupleId: "couple-2", totalScore: 18 },
       ],
       episodeOutcomes: [
-        { coupleId: "couple-1", outcome: "safe" },
-        { coupleId: "couple-2", outcome: "eliminated" },
+        { coupleId: "couple-1", outcome: "safe", bonusPoints: 0 },
+        { coupleId: "couple-2", outcome: "eliminated", bonusPoints: 0 },
       ],
       predictions: [],
       isFinale: false,
@@ -46,7 +46,7 @@ describe("computeWeeklyScores", () => {
         { coupleId: "couple-1", totalScore: 24 },
         { coupleId: "couple-1", totalScore: 27 },
       ],
-      episodeOutcomes: [{ coupleId: "couple-1", outcome: "safe" }],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "safe", bonusPoints: 0 }],
       predictions: [],
       isFinale: false,
     });
@@ -62,7 +62,7 @@ describe("computeWeeklyScores", () => {
       // was_bottom_two/saved_by_judges are historical flags the DB stores, but
       // the scoring function only looks at the final `outcome` — this couple
       // was in the bottom two and saved by judges, so outcome is "safe".
-      episodeOutcomes: [{ coupleId: "couple-1", outcome: "safe" }],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "safe", bonusPoints: 0 }],
       predictions: [
         { managerId: "bob", predictedEliminatedCoupleId: "couple-1", predictedTopScorerCoupleId: null },
       ],
@@ -90,9 +90,9 @@ describe("computeWeeklyScores", () => {
         { coupleId: "third-couple", totalScore: 28 },
       ],
       episodeOutcomes: [
-        { coupleId: "winner-couple", outcome: "winner" },
-        { coupleId: "runner-up-couple", outcome: "runner_up" },
-        { coupleId: "third-couple", outcome: "third_place" },
+        { coupleId: "winner-couple", outcome: "winner", bonusPoints: 0 },
+        { coupleId: "runner-up-couple", outcome: "runner_up", bonusPoints: 0 },
+        { coupleId: "third-couple", outcome: "third_place", bonusPoints: 0 },
       ],
       predictions: [],
       isFinale: true,
@@ -112,7 +112,7 @@ describe("computeWeeklyScores", () => {
       scoringSettings: settings,
       rosterSlots: [{ managerId: "alice", coupleId: "couple-1" }],
       danceScores: [{ coupleId: "couple-1", totalScore: 30 }],
-      episodeOutcomes: [{ coupleId: "couple-1", outcome: "winner" }],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "winner", bonusPoints: 0 }],
       predictions: [],
       isFinale: false,
     });
@@ -125,7 +125,7 @@ describe("computeWeeklyScores", () => {
       scoringSettings: settings,
       rosterSlots: [{ managerId: "alice", coupleId: "couple-1" }],
       danceScores: [],
-      episodeOutcomes: [{ coupleId: "couple-1", outcome: "withdrawn" }],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "withdrawn", bonusPoints: 0 }],
       predictions: [
         { managerId: "bob", predictedEliminatedCoupleId: "couple-1", predictedTopScorerCoupleId: null },
       ],
@@ -144,12 +144,25 @@ describe("computeWeeklyScores", () => {
       scoringSettings: settings,
       rosterSlots: [{ managerId: "alice", coupleId: "couple-1" }],
       danceScores: [],
-      episodeOutcomes: [{ coupleId: "couple-1", outcome: "bye" }],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "bye", bonusPoints: 0 }],
       predictions: [],
       isFinale: false,
     });
 
     expect(result[0].rosterPoints).toBe(0);
+  });
+
+  it("adds bonus points directly to that couple's roster points, independent of survival/podium", () => {
+    const result = computeWeeklyScores({
+      scoringSettings: settings,
+      rosterSlots: [{ managerId: "alice", coupleId: "couple-1" }],
+      danceScores: [{ coupleId: "couple-1", totalScore: 20 }],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "safe", bonusPoints: 3 }],
+      predictions: [],
+      isFinale: false,
+    });
+
+    expect(result[0].rosterPoints).toBe(20 + 10 + 3); // dance + survival + dance-off bonus
   });
 
   it("awards top-scorer prediction points independent of roster ownership", () => {
@@ -161,8 +174,8 @@ describe("computeWeeklyScores", () => {
         { coupleId: "couple-2", totalScore: 27 },
       ],
       episodeOutcomes: [
-        { coupleId: "couple-1", outcome: "safe" },
-        { coupleId: "couple-2", outcome: "safe" },
+        { coupleId: "couple-1", outcome: "safe", bonusPoints: 0 },
+        { coupleId: "couple-2", outcome: "safe", bonusPoints: 0 },
       ],
       predictions: [
         { managerId: "alice", predictedEliminatedCoupleId: null, predictedTopScorerCoupleId: "couple-2" },

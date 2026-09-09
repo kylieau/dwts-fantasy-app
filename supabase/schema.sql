@@ -249,9 +249,17 @@ create table judge_scores (
 -- insert two 'eliminated' rows that week — no special flag needed) and
 -- no-elimination weeks (insert zero 'eliminated' rows — see episodes.is_elimination_week
 -- for the episode-level version of this). was_bottom_two/was_bottom_three/
--- saved_by_judges/was_team_dance are independent flags, not mutually exclusive
--- with each other or with outcome — a couple can be Safe, in the Bottom 2, and
--- saved by judges all in the same week.
+-- saved_by_judges/was_team_dance/had_immunity are independent flags, not
+-- mutually exclusive with each other or with outcome — a couple can be Safe,
+-- in the Bottom 2, and saved by judges all in the same week.
+--
+-- bonus_points/bonus_note cover one-off scoring events that don't fit a named
+-- format (dance-off wins, relay wins, etc.) without needing bespoke schema per
+-- format — added directly into that couple's weekly roster points in
+-- computeWeeklyScores. had_immunity is record-keeping only (the app records
+-- what actually happened rather than simulating the vote, so an immune
+-- couple simply isn't marked Eliminated that week) — it has no scoring or
+-- elimination-blocking effect of its own.
 create table episode_results (
   id uuid primary key default gen_random_uuid(),
   episode_id uuid not null references episodes(id) on delete cascade,
@@ -261,6 +269,9 @@ create table episode_results (
   was_bottom_three boolean not null default false,
   saved_by_judges boolean not null default false,
   was_team_dance boolean not null default false,
+  had_immunity boolean not null default false,
+  bonus_points numeric not null default 0,
+  bonus_note text,
   unique (episode_id, couple_id)
 );
 

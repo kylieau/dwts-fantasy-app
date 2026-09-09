@@ -187,8 +187,11 @@ export type Database = {
       }
       episode_results: {
         Row: {
+          bonus_note: string | null
+          bonus_points: number
           couple_id: string
           episode_id: string
+          had_immunity: boolean
           id: string
           outcome: string
           saved_by_judges: boolean
@@ -197,8 +200,11 @@ export type Database = {
           was_team_dance: boolean
         }
         Insert: {
+          bonus_note?: string | null
+          bonus_points?: number
           couple_id: string
           episode_id: string
+          had_immunity?: boolean
           id?: string
           outcome: string
           saved_by_judges?: boolean
@@ -207,8 +213,11 @@ export type Database = {
           was_team_dance?: boolean
         }
         Update: {
+          bonus_note?: string | null
+          bonus_points?: number
           couple_id?: string
           episode_id?: string
+          had_immunity?: boolean
           id?: string
           outcome?: string
           saved_by_judges?: boolean

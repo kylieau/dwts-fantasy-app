@@ -24,6 +24,9 @@ type EpisodeResult = {
   was_bottom_three: boolean;
   saved_by_judges: boolean;
   was_team_dance: boolean;
+  had_immunity: boolean;
+  bonus_points: number;
+  bonus_note: string | null;
 };
 type Episode = {
   id: string;
@@ -86,6 +89,10 @@ export function AllResultsView({
     if (r.was_bottom_three) notes.push("bottom 3");
     if (r.saved_by_judges) notes.push("judges' save");
     if (r.was_team_dance) notes.push("team dance");
+    if (r.had_immunity) notes.push("immunity");
+    if (r.bonus_points) {
+      notes.push(`+${r.bonus_points} bonus${r.bonus_note ? ` (${r.bonus_note})` : ""}`);
+    }
     return notes.join(", ");
   }
 
