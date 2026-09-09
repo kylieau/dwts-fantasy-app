@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { coupleNameNode } from "@/components/couple-name";
 import type { CoupleNameParts } from "@/lib/couple-display";
+import { formatDeadline } from "@/lib/use-browser-time-zone";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string; status: string; elimination_week: number | null };
 
@@ -137,28 +138,10 @@ export function GrandFinaleBox({
           <CardTitle>Grand Finale</CardTitle>
           <CardDescription>
             Tap couples in the order you think they&apos;ll be eliminated — first tap is who goes home first, last is your predicted winner.
-            {deadline ? ` Locks at ${new Date(deadline).toLocaleString()}.` : ""}
+            {deadline ? ` Locks at ${formatDeadline(deadline)}.` : ""}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {order.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Your order so far
-              </p>
-              {order.map((coupleId, i) => (
-                <div key={coupleId} className="flex items-center justify-between text-sm">
-                  <span>
-                    {i + 1}. {nameFor(coupleId)}
-                  </span>
-                </div>
-              ))}
-              <Button variant="ghost" size="sm" className="self-start" onClick={undoLastTap}>
-                Undo last tap
-              </Button>
-            </div>
-          )}
-
           <div className="flex flex-col gap-1">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {order.length === 0 ? "Tap who's eliminated first" : "Tap who's eliminated next"}
@@ -176,6 +159,24 @@ export function GrandFinaleBox({
               ))}
             </div>
           </div>
+
+          {order.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Your order so far
+              </p>
+              {order.map((coupleId, i) => (
+                <div key={coupleId} className="flex items-center justify-between text-sm">
+                  <span>
+                    {i + 1}. {nameFor(coupleId)}
+                  </span>
+                </div>
+              ))}
+              <Button variant="ghost" size="sm" className="self-start" onClick={undoLastTap}>
+                Undo last tap
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -187,7 +188,7 @@ export function GrandFinaleBox({
         <CardTitle>Grand Finale</CardTitle>
         <CardDescription>
           Review your predicted order, first eliminated to season winner. Use the arrows to fine-tune.
-          {deadline ? ` Locks at ${new Date(deadline).toLocaleString()}.` : ""}
+          {deadline ? ` Locks at ${formatDeadline(deadline)}.` : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

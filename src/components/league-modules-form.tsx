@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useBrowserTimeZone, airsAtToUtcIso, utcIsoToLocalInput } from "@/lib/use-browser-time-zone";
+import { useBrowserTimeZone, airsAtToUtcIso, utcIsoToLocalInput, formatDeadline } from "@/lib/use-browser-time-zone";
 
 type ScoringMethod = "exact_position" | "distance_based" | "binary_tier";
 type WaiverMode = "locked" | "waivers";
@@ -329,7 +329,7 @@ export function LeagueModulesForm({
             <CardContent className="flex flex-col">
               <SettingRow
                 label="Deadline"
-                value={bonusDeadline ? new Date(bonusDeadline).toLocaleString() : "—"}
+                value={bonusDeadline ? formatDeadline(bonusDeadline) : "—"}
               />
               <SettingRow label="Points per correctly-placed couple" value={bonusPicksPointsPerCorrect} />
               <SettingRow label="Scoring method" value={METHOD_ITEMS[bonusMethod]} />

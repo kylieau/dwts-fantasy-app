@@ -13,6 +13,22 @@ export function useBrowserTimeZone(): string {
   return timeZone;
 }
 
+// Every deadline/lock-time display in the app uses this — date plus hour
+// (minute only when it's not on the hour) and a timezone abbreviation, never
+// seconds. Runs client-side so getMinutes()/the formatter's default time
+// zone both reflect the viewer's own clock.
+export function formatDeadline(iso: string): string {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    ...(d.getMinutes() !== 0 ? { minute: "2-digit" as const } : {}),
+    timeZoneName: "short",
+  }).format(d);
+}
+
 export function airsAtToUtcIso(localValue: string): string | null {
   if (!localValue) return null;
   const date = new Date(localValue);

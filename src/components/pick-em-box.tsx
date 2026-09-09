@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import type { CoupleNameParts } from "@/lib/couple-display";
 import { coupleNameNode } from "@/components/couple-name";
+import { formatDeadline } from "@/lib/use-browser-time-zone";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 
@@ -99,7 +100,7 @@ export function PickEmBox({
           {isLocked
             ? "Predictions are locked for this episode."
             : lockAt
-              ? `Locks at ${new Date(lockAt).toLocaleString()}`
+              ? `Locks at ${formatDeadline(lockAt)}`
               : ""}
         </CardDescription>
       </CardHeader>
