@@ -43,6 +43,22 @@ export default async function LeaguePage({
     notFound();
   }
 
+  if (league.commissioner_id === user.id) {
+    const { data: scoringSettings } = await supabase
+      .from("scoring_settings")
+      .select("scoring_configured")
+      .eq("league_id", id)
+      .single();
+
+    if (scoringSettings && !scoringSettings.scoring_configured) {
+      redirect(
+        `/leagues/${id}/settings?message=${encodeURIComponent(
+          "Review and save Scoring Categories to finish setting up your league"
+        )}`
+      );
+    }
+  }
+
   const [{ data: members }, { data: allScores }, { data: rosterSlots }, { data: allCouples }, { data: upcomingEpisode }] =
     await Promise.all([
       supabase

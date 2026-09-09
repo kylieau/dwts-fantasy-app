@@ -16,7 +16,11 @@ export async function createLeague(formData: FormData) {
   }
 
   revalidatePath("/leagues", "layout");
-  redirect(`/leagues/${data.id}`);
+  redirect(
+    `/leagues/${data.id}/settings?message=${encodeURIComponent(
+      "Review and save Scoring Categories to finish setting up your league"
+    )}`
+  );
 }
 
 export async function joinLeague(formData: FormData) {

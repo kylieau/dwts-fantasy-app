@@ -143,6 +143,13 @@ create table scoring_settings (
   bonus_picks_distance_penalty numeric, -- points docked per position off; only used by 'distance_based'
   bonus_picks_tier_size int, -- e.g. 3 for "top 3"; only used by 'binary_tier'
 
+  -- Every new league gets this row with defaults on insert (create_league),
+  -- but the commissioner never explicitly reviewed them until they save this
+  -- form at least once. The league dashboard redirects a commissioner to
+  -- Settings until this flips true, so scoring categories are a required
+  -- creation step rather than silent defaults nobody looked at.
+  scoring_configured boolean not null default false,
+
   constraint at_least_one_category_enabled check (
     judges_score_category_enabled or eliminations_category_enabled or bonus_picks_category_enabled
   ),
@@ -653,7 +660,8 @@ begin
     bonus_picks_deadline = p_bonus_picks_deadline,
     bonus_picks_scoring_method = p_bonus_picks_scoring_method,
     bonus_picks_distance_penalty = p_bonus_picks_distance_penalty,
-    bonus_picks_tier_size = p_bonus_picks_tier_size
+    bonus_picks_tier_size = p_bonus_picks_tier_size,
+    scoring_configured = true
   where league_id = p_league_id
     and exists (
       select 1 from public.leagues

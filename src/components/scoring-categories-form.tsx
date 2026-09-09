@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingRow } from "@/components/setting-row";
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ type ScoringSettings = {
   bonus_picks_scoring_method: string | null;
   bonus_picks_distance_penalty: number | null;
   bonus_picks_tier_size: number | null;
+  scoring_configured: boolean;
 };
 
 const METHOD_ITEMS: Record<ScoringMethod, string> = {
@@ -43,9 +45,11 @@ const METHOD_ITEMS: Record<ScoringMethod, string> = {
 export function ScoringCategoriesForm({
   leagueId,
   scoringSettings,
+  canEdit,
 }: {
   leagueId: string;
   scoringSettings: ScoringSettings | null;
+  canEdit: boolean;
 }) {
   const browserTimeZone = useBrowserTimeZone();
 
@@ -128,8 +132,53 @@ export function ScoringCategoriesForm({
     setSubmitting(false);
   }
 
+  const isRequired = !scoringSettings?.scoring_configured;
+
+  if (!canEdit) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Scoring Categories</CardTitle>
+          <CardDescription>How much each category counts toward Standings.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col">
+          <SettingRow
+            label="Draft Fantasy"
+            value={judgesEnabled ? `On · weight ${judgesWeight}` : "Off"}
+          />
+          {judgesEnabled && (
+            <SettingRow label="Draft counts from" value={`Week ${judgesStartsWeek}`} />
+          )}
+          <SettingRow
+            label="Eliminations (Weekly Pick)"
+            value={eliminationsEnabled ? `On · weight ${eliminationsWeight}` : "Off"}
+          />
+          <SettingRow
+            label="Bonus Picks (Full-Order Prediction)"
+            value={bonusEnabled ? `On · weight ${bonusWeight}` : "Off"}
+          />
+          {bonusEnabled && (
+            <>
+              <SettingRow
+                label="Bonus Picks deadline"
+                value={bonusDeadline ? new Date(bonusDeadline).toLocaleString() : "—"}
+              />
+              <SettingRow label="Bonus Picks method" value={METHOD_ITEMS[bonusMethod]} />
+              {bonusMethod === "distance_based" && (
+                <SettingRow label="Points docked per position off" value={bonusDistancePenalty} />
+              )}
+              {bonusMethod === "binary_tier" && (
+                <SettingRow label="Tier size" value={`Top ${bonusTierSize}`} />
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
+    <Card className={isRequired ? "border-primary" : undefined}>
       <CardHeader>
         <CardTitle>Scoring Categories</CardTitle>
         <CardDescription>
@@ -137,6 +186,11 @@ export function ScoringCategoriesForm({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
+        {isRequired && (
+          <p className="text-sm font-medium text-primary">
+            Required — save this before the rest of your league is available.
+          </p>
+        )}
         {error && <p className="text-sm text-destructive">{error}</p>}
         {success && <p className="text-sm text-muted-foreground">Scoring categories saved.</p>}
 

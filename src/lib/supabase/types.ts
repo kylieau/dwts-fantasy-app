@@ -603,6 +603,7 @@ export type Database = {
           judges_score_multiplier: number
           judges_score_starts_week: number
           league_id: string
+          scoring_configured: boolean
           second_place_points: number
           survival_points: number
           third_place_points: number
@@ -624,6 +625,7 @@ export type Database = {
           judges_score_multiplier?: number
           judges_score_starts_week?: number
           league_id: string
+          scoring_configured?: boolean
           second_place_points?: number
           survival_points?: number
           third_place_points?: number
@@ -645,6 +647,7 @@ export type Database = {
           judges_score_multiplier?: number
           judges_score_starts_week?: number
           league_id?: string
+          scoring_configured?: boolean
           second_place_points?: number
           survival_points?: number
           third_place_points?: number
@@ -1059,6 +1062,7 @@ export type Database = {
           first_place_points: number
           judges_score_multiplier: number
           league_id: string
+          scoring_configured: boolean
           second_place_points: number
           survival_points: number
           third_place_points: number
@@ -1102,6 +1106,7 @@ export type Database = {
           judges_score_multiplier: number
           judges_score_starts_week: number
           league_id: string
+          scoring_configured: boolean
           second_place_points: number
           survival_points: number
           third_place_points: number
