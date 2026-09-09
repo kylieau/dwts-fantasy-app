@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   updateScoringCategories,
   type ScoringCategoriesInput,
@@ -46,10 +46,12 @@ export function ScoringCategoriesForm({
   leagueId,
   scoringSettings,
   canEdit,
+  premiereAirsAt,
 }: {
   leagueId: string;
   scoringSettings: ScoringSettings | null;
   canEdit: boolean;
+  premiereAirsAt: string | null;
 }) {
   const browserTimeZone = useBrowserTimeZone();
 
@@ -88,6 +90,17 @@ export function ScoringCategoriesForm({
   );
   const [bonusTierSize, setBonusTierSize] = useState(scoringSettings?.bonus_picks_tier_size ?? 3);
 
+  // Defaults the Full-Order Prediction deadline to the premiere's air date
+  // when nothing's been saved yet — only on mount, client-side, since it
+  // needs the viewer's own time zone (same hydration-mismatch concern as
+  // the other datetime defaults in this app).
+  useEffect(() => {
+    if (!scoringSettings?.bonus_picks_deadline && premiereAirsAt) {
+      setBonusDeadline(utcIsoToLocalInput(premiereAirsAt));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -105,7 +118,7 @@ export function ScoringCategoriesForm({
     if (bonusEnabled) {
       bonusDeadlineUtc = airsAtToUtcIso(bonusDeadline);
       if (!bonusDeadlineUtc) {
-        setError("Set a valid Bonus Picks deadline.");
+        setError("Set a valid Full-Order Prediction deadline.");
         return;
       }
     }
@@ -150,20 +163,20 @@ export function ScoringCategoriesForm({
             <SettingRow label="Draft counts from" value={`Week ${judgesStartsWeek}`} />
           )}
           <SettingRow
-            label="Eliminations (Weekly Pick)"
+            label="Weekly Pick 'Em"
             value={eliminationsEnabled ? `On · weight ${eliminationsWeight}` : "Off"}
           />
           <SettingRow
-            label="Bonus Picks (Full-Order Prediction)"
+            label="Full-Order Prediction"
             value={bonusEnabled ? `On · weight ${bonusWeight}` : "Off"}
           />
           {bonusEnabled && (
             <>
               <SettingRow
-                label="Bonus Picks deadline"
+                label="Full-Order Prediction deadline"
                 value={bonusDeadline ? new Date(bonusDeadline).toLocaleString() : "—"}
               />
-              <SettingRow label="Bonus Picks method" value={METHOD_ITEMS[bonusMethod]} />
+              <SettingRow label="Full-Order Prediction method" value={METHOD_ITEMS[bonusMethod]} />
               {bonusMethod === "distance_based" && (
                 <SettingRow label="Points docked per position off" value={bonusDistancePenalty} />
               )}
@@ -245,7 +258,7 @@ export function ScoringCategoriesForm({
               checked={eliminationsEnabled}
               onChange={(e) => setEliminationsEnabled(e.target.checked)}
             />
-            Eliminations (Weekly Pick)
+            Weekly Pick &apos;Em
           </label>
           {eliminationsEnabled && (
             <div className="flex items-center gap-2">
@@ -270,7 +283,7 @@ export function ScoringCategoriesForm({
                 checked={bonusEnabled}
                 onChange={(e) => setBonusEnabled(e.target.checked)}
               />
-              Bonus Picks (Full-Order Prediction)
+              Full-Order Prediction
             </label>
             {bonusEnabled && (
               <div className="flex items-center gap-2">

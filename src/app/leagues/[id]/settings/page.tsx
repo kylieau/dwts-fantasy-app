@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updateLeagueSettings, updateScoringSettings } from "./actions";
@@ -67,12 +68,28 @@ export default async function LeagueSettingsPage({
     .eq("league_id", id)
     .single();
 
+  const { data: activeSeasonId } = await supabase.rpc("active_season_id");
+  const { data: premiereEpisode } = await supabase
+    .from("episodes")
+    .select("airs_at")
+    .eq("season_id", activeSeasonId ?? "")
+    .eq("week_number", 1)
+    .maybeSingle();
+
   const boundUpdateLeagueSettings = updateLeagueSettings.bind(null, id);
   const boundUpdateScoringSettings = updateScoringSettings.bind(null, id);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-12">
       <div>
+        <Button
+          render={<Link href={`/leagues/${id}`} />}
+          variant="ghost"
+          size="sm"
+          className="-ml-2 mb-2"
+        >
+          ← Back to {league.name}
+        </Button>
         <h1 className="text-2xl font-semibold tracking-tight">
           {league.name} settings
         </h1>
@@ -85,7 +102,12 @@ export default async function LeagueSettingsPage({
         {message && <p className="mt-2 text-sm text-muted-foreground">{message}</p>}
       </div>
 
-      <ScoringCategoriesForm leagueId={id} scoringSettings={scoringSettings} canEdit={isCommissioner} />
+      <ScoringCategoriesForm
+        leagueId={id}
+        scoringSettings={scoringSettings}
+        canEdit={isCommissioner}
+        premiereAirsAt={premiereEpisode?.airs_at ?? null}
+      />
 
       <Card>
         <CardHeader>
