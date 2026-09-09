@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { submitEpisodeResults } from "@/app/admin/results/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,9 +98,19 @@ export function ResultsForm({
   const [submittedDances, setSubmittedDances] = useState<SubmittedDance[]>([]);
   const [bucketsByWeek, setBucketsByWeek] = useState<Record<number, Record<string, Buckets>>>({});
 
+  const [overviewConfirmed, setOverviewConfirmed] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Read on the client only, after mount — the server-rendered pass has no
+  // meaningful browser time zone to report, and computing it during render
+  // would mismatch the server's SSR output and trigger a hydration error.
+  const [browserTimeZone, setBrowserTimeZone] = useState("");
+  useEffect(() => {
+    setBrowserTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, []);
 
   const activeJudges = judges.filter((j) => selectedJudgeIds.has(j.id));
   const liveTotal = activeJudges.reduce((sum, j) => {
@@ -130,12 +140,19 @@ export function ResultsForm({
   const buckets = bucketsByWeek[weekNumber] ?? Object.fromEntries(couples.map((c) => [c.id, emptyBuckets()]));
 
   function toggleJudge(judgeId: string) {
+    setOverviewConfirmed(false);
     setSelectedJudgeIds((prev) => {
       const next = new Set(prev);
       if (next.has(judgeId)) next.delete(judgeId);
       else next.add(judgeId);
       return next;
     });
+  }
+
+  function airsAtToUtcIso(localValue: string): string | null {
+    if (!localValue) return null;
+    const date = new Date(localValue);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
   }
 
   function submitDanceEntry() {
@@ -212,6 +229,17 @@ export function ResultsForm({
   async function handleSubmit() {
     setError(null);
     setSuccess(false);
+
+    if (!overviewConfirmed) {
+      setError("Confirm the Episode Overview above before saving.");
+      return;
+    }
+    const airsAtUtc = airsAtToUtcIso(airsAt);
+    if (!airsAtUtc) {
+      setError("Enter a valid air date.");
+      return;
+    }
+
     setSubmitting(true);
 
     const entries = couples
@@ -244,7 +272,7 @@ export function ResultsForm({
 
     const result = await submitEpisodeResults({
       weekNumber,
-      airsAt,
+      airsAt: airsAtUtc,
       theme: theme.trim() || null,
       expectedDanceCount,
       isEliminationWeek,
@@ -300,15 +328,21 @@ export function ResultsForm({
               type="number"
               min={1}
               value={weekNumber}
-              onChange={(e) => setWeekNumber(Number(e.target.value))}
+              onChange={(e) => {
+                setOverviewConfirmed(false);
+                setWeekNumber(Number(e.target.value));
+              }}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label>Air date</Label>
+            <Label>Air date{browserTimeZone ? ` (${browserTimeZone})` : ""}</Label>
             <Input
               type="datetime-local"
               value={airsAt}
-              onChange={(e) => setAirsAt(e.target.value)}
+              onChange={(e) => {
+                setOverviewConfirmed(false);
+                setAirsAt(e.target.value);
+              }}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -316,7 +350,10 @@ export function ResultsForm({
             <Input
               placeholder="e.g. Villains Night"
               value={theme}
-              onChange={(e) => setTheme(e.target.value)}
+              onChange={(e) => {
+                setOverviewConfirmed(false);
+                setTheme(e.target.value);
+              }}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -325,7 +362,10 @@ export function ResultsForm({
               type="number"
               min={1}
               value={expectedDanceCount}
-              onChange={(e) => setExpectedDanceCount(Number(e.target.value))}
+              onChange={(e) => {
+                setOverviewConfirmed(false);
+                setExpectedDanceCount(Number(e.target.value));
+              }}
             />
           </div>
           <div className="flex items-center gap-4">
@@ -333,7 +373,10 @@ export function ResultsForm({
               <input
                 type="checkbox"
                 checked={isEliminationWeek}
-                onChange={(e) => setIsEliminationWeek(e.target.checked)}
+                onChange={(e) => {
+                  setOverviewConfirmed(false);
+                  setIsEliminationWeek(e.target.checked);
+                }}
               />
               Elimination week
             </label>
@@ -341,7 +384,10 @@ export function ResultsForm({
               <input
                 type="checkbox"
                 checked={isFinale}
-                onChange={(e) => setIsFinale(e.target.checked)}
+                onChange={(e) => {
+                  setOverviewConfirmed(false);
+                  setIsFinale(e.target.checked);
+                }}
               />
               Finale
             </label>
@@ -361,9 +407,35 @@ export function ResultsForm({
               ))}
             </div>
           </div>
+          <div className="flex items-center gap-3 sm:col-span-2">
+            {overviewConfirmed ? (
+              <>
+                <span className="text-sm font-medium text-primary">
+                  ✓ Episode Overview confirmed
+                </span>
+                <Button size="sm" variant="ghost" onClick={() => setOverviewConfirmed(false)}>
+                  Edit
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" onClick={() => setOverviewConfirmed(true)} disabled={!airsAt}>
+                Confirm Episode Overview
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
+      {!overviewConfirmed && (
+        <p className="text-sm text-muted-foreground">
+          Confirm the Episode Overview above before entering dance results or
+          eliminations — those settings apply to every dance result entered
+          for this week.
+        </p>
+      )}
+
+      {overviewConfirmed && (
+      <>
       <Card>
         <CardHeader>
           <CardTitle>Enter Dance Results — Week {weekNumber}</CardTitle>
@@ -533,6 +605,8 @@ export function ResultsForm({
       <Button onClick={handleSubmit} disabled={submitting}>
         {submitting ? "Saving..." : "Save results"}
       </Button>
+      </>
+      )}
     </div>
   );
 }
