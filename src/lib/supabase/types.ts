@@ -286,6 +286,55 @@ export type Database = {
           },
         ]
       }
+      grand_finale_predictions: {
+        Row: {
+          couple_id: string
+          id: string
+          league_id: string
+          manager_id: string
+          predicted_position: number
+          submitted_at: string
+        }
+        Insert: {
+          couple_id: string
+          id?: string
+          league_id: string
+          manager_id: string
+          predicted_position: number
+          submitted_at?: string
+        }
+        Update: {
+          couple_id?: string
+          id?: string
+          league_id?: string
+          manager_id?: string
+          predicted_position?: number
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grand_finale_predictions_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grand_finale_predictions_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grand_finale_predictions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       judge_scores: {
         Row: {
           dance_score_id: string
@@ -592,6 +641,7 @@ export type Database = {
           bonus_picks_category_weight: number
           bonus_picks_deadline: string | null
           bonus_picks_distance_penalty: number | null
+          bonus_picks_points_per_correct: number
           bonus_picks_scoring_method: string | null
           bonus_picks_tier_size: number | null
           eliminations_category_enabled: boolean
@@ -614,6 +664,7 @@ export type Database = {
           bonus_picks_category_weight?: number
           bonus_picks_deadline?: string | null
           bonus_picks_distance_penalty?: number | null
+          bonus_picks_points_per_correct?: number
           bonus_picks_scoring_method?: string | null
           bonus_picks_tier_size?: number | null
           eliminations_category_enabled?: boolean
@@ -636,6 +687,7 @@ export type Database = {
           bonus_picks_category_weight?: number
           bonus_picks_deadline?: string | null
           bonus_picks_distance_penalty?: number | null
+          bonus_picks_points_per_correct?: number
           bonus_picks_scoring_method?: string | null
           bonus_picks_tier_size?: number | null
           eliminations_category_enabled?: boolean
@@ -749,6 +801,7 @@ export type Database = {
         Row: {
           computed_at: string
           episode_id: string
+          grand_finale_points: number
           id: string
           league_id: string
           manager_id: string
@@ -759,6 +812,7 @@ export type Database = {
         Insert: {
           computed_at?: string
           episode_id: string
+          grand_finale_points?: number
           id?: string
           league_id: string
           manager_id: string
@@ -769,6 +823,7 @@ export type Database = {
         Update: {
           computed_at?: string
           episode_id?: string
+          grand_finale_points?: number
           id?: string
           league_id?: string
           manager_id?: string
@@ -969,6 +1024,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      submit_grand_finale_prediction: {
+        Args: { p_couple_ids: string[]; p_league_id: string }
+        Returns: {
+          couple_id: string
+          id: string
+          league_id: string
+          manager_id: string
+          predicted_position: number
+          submitted_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "grand_finale_predictions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       submit_prediction: {
         Args: {
           p_episode_id: string
@@ -1052,6 +1124,7 @@ export type Database = {
           p_bonus_picks_category_weight: number
           p_bonus_picks_deadline: string | null
           p_bonus_picks_distance_penalty: number | null
+          p_bonus_picks_points_per_correct: number
           p_bonus_picks_scoring_method: string | null
           p_bonus_picks_tier_size: number | null
           p_elimination_prediction_points: number
@@ -1073,6 +1146,7 @@ export type Database = {
           bonus_picks_category_weight: number
           bonus_picks_deadline: string | null
           bonus_picks_distance_penalty: number | null
+          bonus_picks_points_per_correct: number
           bonus_picks_scoring_method: string | null
           bonus_picks_tier_size: number | null
           eliminations_category_enabled: boolean

@@ -37,7 +37,14 @@ export type WeeklyManagerScore = {
   managerId: string;
   rosterPoints: number;
   predictionPoints: number;
+  grandFinalePoints: number;
   totalPoints: number;
+};
+
+export type CategoryWeights = {
+  judges: number;
+  eliminations: number;
+  bonus: number;
 };
 
 const PODIUM_POINTS_KEY: Record<string, keyof ScoringSettings> = {
@@ -66,6 +73,8 @@ export function computeWeeklyScores({
   episodeOutcomes,
   predictions,
   isFinale,
+  categoryWeights = { judges: 1, eliminations: 1, bonus: 1 },
+  grandFinalePointsByManager = {},
 }: {
   scoringSettings: ScoringSettings;
   rosterSlots: RosterSlot[];
@@ -73,6 +82,8 @@ export function computeWeeklyScores({
   episodeOutcomes: EpisodeOutcome[];
   predictions: Prediction[];
   isFinale: boolean;
+  categoryWeights?: CategoryWeights;
+  grandFinalePointsByManager?: Record<string, number>;
 }): WeeklyManagerScore[] {
   const coupleTotalScore = new Map<string, number>();
   for (const { coupleId, totalScore } of danceScores) {
@@ -126,16 +137,86 @@ export function computeWeeklyScores({
     );
   }
 
-  const managerIds = new Set([...rosterPointsByManager.keys(), ...predictionPointsByManager.keys()]);
+  const managerIds = new Set([
+    ...rosterPointsByManager.keys(),
+    ...predictionPointsByManager.keys(),
+    ...Object.keys(grandFinalePointsByManager),
+  ]);
 
   return [...managerIds].map((managerId) => {
     const rosterPoints = rosterPointsByManager.get(managerId) ?? 0;
     const predictionPoints = predictionPointsByManager.get(managerId) ?? 0;
+    const grandFinalePoints = grandFinalePointsByManager[managerId] ?? 0;
     return {
       managerId,
       rosterPoints,
       predictionPoints,
-      totalPoints: rosterPoints + predictionPoints,
+      grandFinalePoints,
+      totalPoints:
+        rosterPoints * categoryWeights.judges +
+        predictionPoints * categoryWeights.eliminations +
+        grandFinalePoints * categoryWeights.bonus,
     };
   });
+}
+
+export type GrandFinaleMethod = "exact_position" | "distance_based" | "binary_tier";
+
+export type GrandFinalePrediction = {
+  managerId: string;
+  coupleId: string;
+  predictedPosition: number;
+};
+
+export type ResolvedCouple = {
+  coupleId: string;
+  actualPosition: number;
+};
+
+// Pure and DB-free, same design as computeWeeklyScores — the caller resolves
+// which couples newly became known this call (see applyEpisodeResults) and
+// passes in only those, since a couple's Grand Finale points are earned once,
+// the moment its actual position becomes known, not recomputed every week.
+export function computeGrandFinalePoints({
+  predictions,
+  resolvedCouples,
+  totalCouples,
+  method,
+  distancePenalty,
+  tierSize,
+  pointsPerCorrect,
+}: {
+  predictions: GrandFinalePrediction[];
+  resolvedCouples: ResolvedCouple[];
+  totalCouples: number;
+  method: GrandFinaleMethod;
+  distancePenalty: number | null;
+  tierSize: number | null;
+  pointsPerCorrect: number;
+}): Record<string, number> {
+  const actualPositionByCouple = new Map(resolvedCouples.map((r) => [r.coupleId, r.actualPosition]));
+  const tierThreshold = totalCouples - (tierSize ?? 0);
+
+  const pointsByManager: Record<string, number> = {};
+
+  for (const p of predictions) {
+    const actualPosition = actualPositionByCouple.get(p.coupleId);
+    if (actualPosition === undefined) continue;
+
+    let points = 0;
+    if (method === "exact_position") {
+      points = p.predictedPosition === actualPosition ? pointsPerCorrect : 0;
+    } else if (method === "distance_based") {
+      const distance = Math.abs(p.predictedPosition - actualPosition);
+      points = Math.max(0, pointsPerCorrect - distance * (distancePenalty ?? 0));
+    } else if (method === "binary_tier") {
+      const predictedInTier = p.predictedPosition > tierThreshold;
+      const actualInTier = actualPosition > tierThreshold;
+      points = predictedInTier && actualInTier ? pointsPerCorrect : 0;
+    }
+
+    pointsByManager[p.managerId] = (pointsByManager[p.managerId] ?? 0) + points;
+  }
+
+  return pointsByManager;
 }

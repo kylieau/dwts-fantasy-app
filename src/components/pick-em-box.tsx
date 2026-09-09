@@ -69,7 +69,7 @@ export function PickEmBox({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Pick &apos;Em</CardTitle>
+          <CardTitle>Curtain Call</CardTitle>
           <CardDescription>No upcoming episode scheduled yet.</CardDescription>
         </CardHeader>
       </Card>
@@ -94,7 +94,7 @@ export function PickEmBox({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pick &apos;Em — Week {episode.week_number}</CardTitle>
+        <CardTitle>Curtain Call — Week {episode.week_number}</CardTitle>
         <CardDescription>
           {isLocked
             ? "Predictions are locked for this episode."

@@ -12,6 +12,7 @@ import {
 import { StandingsTable } from "@/components/standings-table";
 import { RosterCard } from "@/components/roster-card";
 import { PickEmBox } from "@/components/pick-em-box";
+import { GrandFinaleBox } from "@/components/grand-finale-box";
 import { buildCoupleDisplayNames, formatCoupleName } from "@/lib/couple-display";
 
 export default async function LeaguePage({
@@ -45,7 +46,9 @@ export default async function LeaguePage({
 
   const { data: scoringSettings } = await supabase
     .from("scoring_settings")
-    .select("scoring_configured, judges_score_category_enabled, eliminations_category_enabled")
+    .select(
+      "scoring_configured, judges_score_category_enabled, eliminations_category_enabled, bonus_picks_category_enabled, bonus_picks_deadline"
+    )
     .eq("league_id", id)
     .single();
 
@@ -61,6 +64,9 @@ export default async function LeaguePage({
 
   const danceCardOn = scoringSettings?.judges_score_category_enabled ?? true;
   const curtainCallOn = scoringSettings?.eliminations_category_enabled ?? true;
+  const grandFinaleOn = scoringSettings?.bonus_picks_category_enabled ?? false;
+  const grandFinaleDeadline = scoringSettings?.bonus_picks_deadline ?? null;
+  const grandFinaleLocked = !!grandFinaleDeadline && new Date() >= new Date(grandFinaleDeadline);
 
   const [{ data: members }, { data: allScores }, { data: rosterSlots }, { data: allCouples }, { data: upcomingEpisode }] =
     await Promise.all([
@@ -80,7 +86,7 @@ export default async function LeaguePage({
       supabase
         .from("couples")
         .select(
-          "id, status, season_id, celebrity:people!couples_celebrity_id_fkey(name), pro:people!couples_pro_id_fkey(name)"
+          "id, status, season_id, elimination_week, celebrity:people!couples_celebrity_id_fkey(name), pro:people!couples_pro_id_fkey(name)"
         ),
       supabase
         .from("episodes")
@@ -108,6 +114,7 @@ export default async function LeaguePage({
     id: c.id,
     status: c.status,
     season_id: c.season_id,
+    elimination_week: c.elimination_week,
     celebrity_name: c.celebrity?.name ?? "Unknown",
     pro_name: c.pro?.name ?? "Unknown",
   }));
@@ -115,6 +122,7 @@ export default async function LeaguePage({
   const activeCouples = flatCouples.filter(
     (c) => c.status === "active" && c.season_id === activeSeasonId
   );
+  const seasonCouples = flatCouples.filter((c) => c.season_id === activeSeasonId);
   // Historical lookups (roster, revealed predictions) span every couple this
   // league has ever touched; the Pick 'Em picker is scoped to just the couples
   // actually offered, so collisions are checked against that pool specifically.
@@ -169,6 +177,19 @@ export default async function LeaguePage({
     }
   }
 
+  let grandFinaleOrder: string[] | null = null;
+  if (grandFinaleOn) {
+    const { data: ownGrandFinalePicks } = await supabase
+      .from("grand_finale_predictions")
+      .select("couple_id, predicted_position")
+      .eq("league_id", id)
+      .eq("manager_id", user.id)
+      .order("predicted_position", { ascending: true });
+    grandFinaleOrder = ownGrandFinalePicks && ownGrandFinalePicks.length > 0
+      ? ownGrandFinalePicks.map((p) => p.couple_id)
+      : null;
+  }
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-12">
       <div className="flex items-start justify-between gap-4">
@@ -211,6 +232,17 @@ export default async function LeaguePage({
           existingPrediction={ownPrediction}
           isLocked={isLocked}
           revealedPredictions={revealedPredictions}
+        />
+      )}
+
+      {grandFinaleOn && (
+        <GrandFinaleBox
+          leagueId={id}
+          couples={seasonCouples}
+          coupleDisplayNames={Object.fromEntries(allDisplayNames)}
+          existingOrder={grandFinaleOrder}
+          deadline={grandFinaleDeadline}
+          isLocked={grandFinaleLocked}
         />
       )}
 

@@ -51,6 +51,7 @@ export type ScoringCategoriesInput = {
   thirdPlacePoints: number;
   eliminationPredictionPoints: number;
   topScorerPredictionPoints: number;
+  bonusPicksPointsPerCorrect: number;
 };
 
 export async function updateScoringCategories(
@@ -79,6 +80,7 @@ export async function updateScoringCategories(
     p_third_place_points: input.thirdPlacePoints,
     p_elimination_prediction_points: input.eliminationPredictionPoints,
     p_top_scorer_prediction_points: input.topScorerPredictionPoints,
+    p_bonus_picks_points_per_correct: input.bonusPicksPointsPerCorrect,
   });
 
   if (error) return { error: error.message };

@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { computeWeeklyScores, type Outcome } from "@/lib/scoring";
+import { computeGrandFinalePoints, computeWeeklyScores, type GrandFinaleMethod, type Outcome } from "@/lib/scoring";
+
+const RESOLVING_OUTCOMES = new Set<Outcome>(["eliminated", "withdrawn", "winner", "runner_up", "third_place"]);
 
 export type JudgeScoreSubmission = { judgeId: string; score: number };
 
@@ -195,6 +197,50 @@ export async function applyEpisodeResults(
     bonusPoints: r.bonus_points,
   }));
 
+  // Grand Finale resolves incrementally: the moment a couple's real fate is
+  // known (this episode's eliminations/withdrawals/podium placements), that
+  // couple's predicted-vs-actual position is scored once and never again —
+  // this is season-wide, not per-league, since "actual position" depends on
+  // the full elimination order across every league's shared couples.
+  const newlyResolvedCoupleIds = outcomeRows
+    .filter((r) => RESOLVING_OUTCOMES.has(r.outcome as Outcome))
+    .map((r) => r.couple_id);
+
+  const actualPositionByCouple = new Map<string, number>();
+  let totalCouples = 0;
+  if (newlyResolvedCoupleIds.length > 0) {
+    const { data: seasonCouples, error: seasonCouplesErr } = await admin
+      .from("couples")
+      .select("id, status, elimination_week")
+      .eq("season_id", seasonId);
+    if (seasonCouplesErr) return { error: seasonCouplesErr.message };
+
+    totalCouples = (seasonCouples ?? []).length;
+
+    // Dense rank by elimination_week: couples eliminated the same week (a
+    // double-elimination) share a position, both scored against it.
+    const eliminationWeeks = [
+      ...new Set(
+        (seasonCouples ?? [])
+          .filter((c) => c.status === "eliminated" || c.status === "withdrawn")
+          .map((c) => c.elimination_week!)
+      ),
+    ].sort((a, b) => a - b);
+    const rankByWeek = new Map(eliminationWeeks.map((week, i) => [week, i + 1]));
+
+    for (const couple of seasonCouples ?? []) {
+      if (couple.status === "winner") actualPositionByCouple.set(couple.id, totalCouples);
+      else if (couple.status === "runner_up") actualPositionByCouple.set(couple.id, totalCouples - 1);
+      else if (couple.status === "third_place") actualPositionByCouple.set(couple.id, totalCouples - 2);
+      else if (
+        (couple.status === "eliminated" || couple.status === "withdrawn") &&
+        couple.elimination_week !== null
+      ) {
+        actualPositionByCouple.set(couple.id, rankByWeek.get(couple.elimination_week)!);
+      }
+    }
+  }
+
   for (const league of leagues ?? []) {
     const [{ data: scoringSettings }, { data: rosterSlots }, { data: predictions }] = await Promise.all([
       admin.from("scoring_settings").select("*").eq("league_id", league.id).single(),
@@ -212,6 +258,32 @@ export async function applyEpisodeResults(
     ]);
 
     if (!scoringSettings || !rosterSlots) continue;
+
+    let grandFinalePointsByManager: Record<string, number> = {};
+    if (newlyResolvedCoupleIds.length > 0) {
+      const { data: grandFinalePredictions, error: gfpErr } = await admin
+        .from("grand_finale_predictions")
+        .select("manager_id, couple_id, predicted_position")
+        .eq("league_id", league.id)
+        .in("couple_id", newlyResolvedCoupleIds);
+      if (gfpErr) return { error: gfpErr.message };
+
+      grandFinalePointsByManager = computeGrandFinalePoints({
+        predictions: (grandFinalePredictions ?? []).map((p) => ({
+          managerId: p.manager_id,
+          coupleId: p.couple_id,
+          predictedPosition: p.predicted_position,
+        })),
+        resolvedCouples: newlyResolvedCoupleIds
+          .filter((id) => actualPositionByCouple.has(id))
+          .map((id) => ({ coupleId: id, actualPosition: actualPositionByCouple.get(id)! })),
+        totalCouples,
+        method: (scoringSettings.bonus_picks_scoring_method as GrandFinaleMethod) ?? "exact_position",
+        distancePenalty: scoringSettings.bonus_picks_distance_penalty,
+        tierSize: scoringSettings.bonus_picks_tier_size,
+        pointsPerCorrect: scoringSettings.bonus_picks_points_per_correct,
+      });
+    }
 
     const scores = computeWeeklyScores({
       scoringSettings: {
@@ -234,6 +306,12 @@ export async function applyEpisodeResults(
         predictedTopScorerCoupleId: p.predicted_top_scorer_couple_id,
       })),
       isFinale: episode.is_finale,
+      categoryWeights: {
+        judges: scoringSettings.judges_score_category_weight,
+        eliminations: scoringSettings.eliminations_category_weight,
+        bonus: scoringSettings.bonus_picks_category_weight,
+      },
+      grandFinalePointsByManager,
     });
 
     if (scores.length === 0) continue;
@@ -245,6 +323,7 @@ export async function applyEpisodeResults(
         episode_id: episode.id,
         roster_points: s.rosterPoints,
         prediction_points: s.predictionPoints,
+        grand_finale_points: s.grandFinalePoints,
         total_points: s.totalPoints,
       })),
       { onConflict: "league_id,manager_id,episode_id" }

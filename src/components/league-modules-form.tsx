@@ -37,6 +37,7 @@ type ScoringSettings = {
   bonus_picks_scoring_method: string | null;
   bonus_picks_distance_penalty: number | null;
   bonus_picks_tier_size: number | null;
+  bonus_picks_points_per_correct: number;
   judges_score_multiplier: number;
   survival_points: number;
   first_place_points: number;
@@ -156,6 +157,9 @@ export function LeagueModulesForm({
     scoringSettings?.bonus_picks_distance_penalty ?? 2
   );
   const [bonusTierSize, setBonusTierSize] = useState(scoringSettings?.bonus_picks_tier_size ?? 3);
+  const [bonusPicksPointsPerCorrect, setBonusPicksPointsPerCorrect] = useState(
+    scoringSettings?.bonus_picks_points_per_correct ?? 50
+  );
 
   // Defaults the Grand Finale deadline to the premiere's air date when
   // nothing's been saved yet — only on mount, client-side, since it needs
@@ -221,6 +225,7 @@ export function LeagueModulesForm({
       thirdPlacePoints,
       eliminationPredictionPoints,
       topScorerPredictionPoints,
+      bonusPicksPointsPerCorrect,
     };
 
     const leagueInput: LeagueSettingsInput = {
@@ -326,6 +331,7 @@ export function LeagueModulesForm({
                 label="Deadline"
                 value={bonusDeadline ? new Date(bonusDeadline).toLocaleString() : "—"}
               />
+              <SettingRow label="Points per correctly-placed couple" value={bonusPicksPointsPerCorrect} />
               <SettingRow label="Scoring method" value={METHOD_ITEMS[bonusMethod]} />
               {bonusMethod === "distance_based" && (
                 <SettingRow label="Points docked per position off" value={bonusDistancePenalty} />
@@ -624,6 +630,16 @@ export function LeagueModulesForm({
                   type="datetime-local"
                   value={bonusDeadline}
                   onChange={(e) => setBonusDeadline(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="bonusPicksPointsPerCorrect">Points per correctly-placed couple</Label>
+                <Input
+                  id="bonusPicksPointsPerCorrect"
+                  type="number"
+                  min={0}
+                  value={bonusPicksPointsPerCorrect}
+                  onChange={(e) => setBonusPicksPointsPerCorrect(Number(e.target.value))}
                 />
               </div>
               <div className="flex flex-col gap-2">

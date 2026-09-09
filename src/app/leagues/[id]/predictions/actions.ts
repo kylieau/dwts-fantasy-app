@@ -24,3 +24,19 @@ export async function submitPrediction(
   revalidatePath(`/leagues/${leagueId}`);
   return { error: null };
 }
+
+export async function submitGrandFinalePrediction(
+  leagueId: string,
+  coupleIdsInOrder: string[]
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("submit_grand_finale_prediction", {
+    p_league_id: leagueId,
+    p_couple_ids: coupleIdsInOrder,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/leagues/${leagueId}`);
+  return { error: null };
+}

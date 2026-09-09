@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeWeeklyScores, type ScoringSettings } from "./scoring";
+import { computeGrandFinalePoints, computeWeeklyScores, type ScoringSettings } from "./scoring";
 
 const settings: ScoringSettings = {
   judgesScoreMultiplier: 1,
@@ -189,5 +189,116 @@ describe("computeWeeklyScores", () => {
 
     expect(alice.predictionPoints).toBe(15);
     expect(bob.predictionPoints).toBe(0);
+  });
+
+  it("applies category weights to totalPoints, leaving the raw per-category points unweighted", () => {
+    const result = computeWeeklyScores({
+      scoringSettings: settings,
+      rosterSlots: [{ managerId: "alice", coupleId: "couple-1" }],
+      danceScores: [{ coupleId: "couple-1", totalScore: 20 }],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "safe", bonusPoints: 0 }],
+      predictions: [
+        { managerId: "alice", predictedEliminatedCoupleId: null, predictedTopScorerCoupleId: "couple-1" },
+      ],
+      isFinale: false,
+      categoryWeights: { judges: 2, eliminations: 0.5, bonus: 1 },
+      grandFinalePointsByManager: { alice: 10 },
+    });
+
+    const alice = result.find((r) => r.managerId === "alice")!;
+    expect(alice.rosterPoints).toBe(30); // 20 dance + 10 survival, unweighted
+    expect(alice.predictionPoints).toBe(15); // unweighted
+    expect(alice.grandFinalePoints).toBe(10); // unweighted
+    expect(alice.totalPoints).toBe(30 * 2 + 15 * 0.5 + 10 * 1);
+  });
+
+  it("defaults totalPoints to a flat sum when no weights/grand-finale points are passed", () => {
+    const result = computeWeeklyScores({
+      scoringSettings: settings,
+      rosterSlots: [{ managerId: "alice", coupleId: "couple-1" }],
+      danceScores: [{ coupleId: "couple-1", totalScore: 20 }],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "safe", bonusPoints: 0 }],
+      predictions: [],
+      isFinale: false,
+    });
+
+    expect(result[0].totalPoints).toBe(30);
+    expect(result[0].grandFinalePoints).toBe(0);
+  });
+});
+
+describe("computeGrandFinalePoints", () => {
+  const totalCouples = 6;
+
+  it("exact_position: full points only on an exact match", () => {
+    const points = computeGrandFinalePoints({
+      predictions: [
+        { managerId: "alice", coupleId: "couple-1", predictedPosition: 2 },
+        { managerId: "bob", coupleId: "couple-1", predictedPosition: 3 },
+      ],
+      resolvedCouples: [{ coupleId: "couple-1", actualPosition: 2 }],
+      totalCouples,
+      method: "exact_position",
+      distancePenalty: null,
+      tierSize: null,
+      pointsPerCorrect: 50,
+    });
+
+    expect(points.alice).toBe(50);
+    expect(points.bob).toBe(0);
+  });
+
+  it("distance_based: docks points per position off, floored at 0", () => {
+    const points = computeGrandFinalePoints({
+      predictions: [
+        { managerId: "alice", coupleId: "couple-1", predictedPosition: 2 },
+        { managerId: "bob", coupleId: "couple-1", predictedPosition: 6 },
+      ],
+      resolvedCouples: [{ coupleId: "couple-1", actualPosition: 3 }],
+      totalCouples,
+      method: "distance_based",
+      distancePenalty: 5,
+      tierSize: null,
+      pointsPerCorrect: 50,
+    });
+
+    expect(points.alice).toBe(45); // 1 position off: 50 - 1*5
+    expect(points.bob).toBe(35); // 3 positions off: 50 - 3*5
+  });
+
+  it("binary_tier: full credit only when predicted AND actually in the top tier", () => {
+    const points = computeGrandFinalePoints({
+      predictions: [
+        // top 3 by position (totalCouples=6, tierSize=3) is positions 4,5,6
+        { managerId: "alice", coupleId: "winner", predictedPosition: 5 }, // predicted top 3
+        { managerId: "bob", coupleId: "early-out", predictedPosition: 1 }, // predicted NOT top 3
+      ],
+      resolvedCouples: [
+        { coupleId: "winner", actualPosition: 6 }, // actually top 3 (won)
+        { coupleId: "early-out", actualPosition: 1 }, // actually not top 3
+      ],
+      totalCouples,
+      method: "binary_tier",
+      distancePenalty: null,
+      tierSize: 3,
+      pointsPerCorrect: 50,
+    });
+
+    expect(points.alice).toBe(50); // correctly called a finalist
+    expect(points.bob).toBe(0); // correctly excluded, but that earns no credit
+  });
+
+  it("ignores predictions for couples not in the resolved batch", () => {
+    const points = computeGrandFinalePoints({
+      predictions: [{ managerId: "alice", coupleId: "still-active", predictedPosition: 1 }],
+      resolvedCouples: [],
+      totalCouples,
+      method: "exact_position",
+      distancePenalty: null,
+      tierSize: null,
+      pointsPerCorrect: 50,
+    });
+
+    expect(points).toEqual({});
   });
 });

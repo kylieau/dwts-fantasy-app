@@ -142,6 +142,7 @@ create table scoring_settings (
   bonus_picks_scoring_method text check (bonus_picks_scoring_method in ('exact_position', 'distance_based', 'binary_tier')),
   bonus_picks_distance_penalty numeric, -- points docked per position off; only used by 'distance_based'
   bonus_picks_tier_size int, -- e.g. 3 for "top 3"; only used by 'binary_tier'
+  bonus_picks_points_per_correct numeric not null default 50, -- base value a correctly-placed couple earns
 
   -- Every new league gets this row with defaults on insert (create_league),
   -- but the commissioner never explicitly reviewed them until they save this
@@ -342,6 +343,25 @@ create table predictions (
 );
 
 -- ============================================================
+-- Grand Finale: a one-time, season-long prediction of the full elimination
+-- order. One row per couple per manager (mirrors draft_picks/roster_slots'
+-- one-row-per-item convention) rather than a single array column, so each
+-- couple's predicted position can be queried/joined directly when scoring.
+-- position 1 = predicted first eliminated ... N = predicted winner.
+-- ============================================================
+
+create table grand_finale_predictions (
+  id uuid primary key default gen_random_uuid(),
+  league_id uuid not null references leagues(id) on delete cascade,
+  manager_id uuid not null references profiles(id),
+  couple_id uuid not null references couples(id),
+  predicted_position int not null,
+  submitted_at timestamptz not null default now(),
+  unique (league_id, manager_id, couple_id),
+  unique (league_id, manager_id, predicted_position)
+);
+
+-- ============================================================
 -- Cached weekly + cumulative scores (recomputed on admin results entry)
 -- ============================================================
 
@@ -352,6 +372,13 @@ create table weekly_manager_scores (
   episode_id uuid not null references episodes(id),
   roster_points numeric not null default 0,
   prediction_points numeric not null default 0,
+  -- This episode's incremental Grand Finale contribution only (couples whose
+  -- fate first became known this episode), not a running cumulative total —
+  -- summed across episodes the same way roster/prediction points already are.
+  grand_finale_points numeric not null default 0,
+  -- The only one of these four that's actually weighted (judges_score/
+  -- eliminations/bonus_picks_category_weight applied in computeWeeklyScores);
+  -- the others stay raw so their un-weighted values are still visible.
   total_points numeric not null default 0,
   computed_at timestamptz not null default now(),
   unique (league_id, manager_id, episode_id)
@@ -608,7 +635,8 @@ create function public.update_scoring_categories(
   p_second_place_points numeric,
   p_third_place_points numeric,
   p_elimination_prediction_points numeric,
-  p_top_scorer_prediction_points numeric
+  p_top_scorer_prediction_points numeric,
+  p_bonus_picks_points_per_correct numeric
 )
 returns public.scoring_settings
 language plpgsql
@@ -637,6 +665,7 @@ begin
     third_place_points = p_third_place_points,
     elimination_prediction_points = p_elimination_prediction_points,
     top_scorer_prediction_points = p_top_scorer_prediction_points,
+    bonus_picks_points_per_correct = p_bonus_picks_points_per_correct,
     scoring_configured = true
   where league_id = p_league_id
     and exists (
@@ -654,9 +683,9 @@ end;
 $$;
 
 revoke execute on function public.update_league_settings(uuid, text, text, int, numeric) from public;
-revoke execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
+revoke execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int, numeric, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
 grant execute on function public.update_league_settings(uuid, text, text, int, numeric) to authenticated;
-grant execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to authenticated;
+grant execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int, numeric, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to authenticated;
 
 -- ============================================================
 -- Draft: couples are global read-only reference data; starting the draft and
@@ -1044,6 +1073,85 @@ $$;
 
 revoke execute on function public.submit_prediction(uuid, uuid, uuid, uuid) from public;
 grant execute on function public.submit_prediction(uuid, uuid, uuid, uuid) to authenticated;
+
+-- ============================================================
+-- Grand Finale predictions: same "owner pre-lock, league-wide post-lock"
+-- visibility as weekly predictions, but the lock moment is a single
+-- commissioner-set deadline (scoring_settings.bonus_picks_deadline) rather
+-- than one computed per episode, so no separate lock_at function is needed.
+-- ============================================================
+
+grant select on public.grand_finale_predictions to authenticated;
+
+create policy "grand finale predictions visible to owner pre-deadline, league post-deadline"
+on public.grand_finale_predictions for select
+using (
+  public.is_league_member(league_id)
+  and (
+    auth.uid() = manager_id
+    or now() >= (
+      select bonus_picks_deadline from public.scoring_settings
+      where league_id = grand_finale_predictions.league_id
+    )
+  )
+);
+
+create function public.submit_grand_finale_prediction(p_league_id uuid, p_couple_ids uuid[])
+returns setof public.grand_finale_predictions
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_deadline timestamptz;
+  v_season_id uuid;
+  v_expected_count int;
+begin
+  if not public.is_league_member(p_league_id) then
+    raise exception 'You are not a member of this league';
+  end if;
+
+  select bonus_picks_deadline into v_deadline
+  from public.scoring_settings
+  where league_id = p_league_id and bonus_picks_category_enabled;
+
+  if v_deadline is null then
+    raise exception 'Grand Finale is not enabled for this league';
+  end if;
+
+  if now() >= v_deadline then
+    raise exception 'Grand Finale predictions are locked';
+  end if;
+
+  v_season_id := public.active_season_id();
+
+  select count(*) into v_expected_count from public.couples where season_id = v_season_id;
+
+  if array_length(p_couple_ids, 1) is distinct from v_expected_count
+     or (select count(distinct c) from unnest(p_couple_ids) as c) is distinct from v_expected_count
+  then
+    raise exception 'Prediction must include every couple this season, exactly once';
+  end if;
+
+  if exists (
+    select 1 from unnest(p_couple_ids) as c
+    where not exists (select 1 from public.couples where id = c and season_id = v_season_id)
+  ) then
+    raise exception 'Prediction includes a couple not in the current season';
+  end if;
+
+  delete from public.grand_finale_predictions
+  where league_id = p_league_id and manager_id = auth.uid();
+
+  return query
+  insert into public.grand_finale_predictions (league_id, manager_id, couple_id, predicted_position)
+  select p_league_id, auth.uid(), c, ordinality
+  from unnest(p_couple_ids) with ordinality as t(c, ordinality)
+  returning *;
+end;
+$$;
+
+revoke execute on function public.submit_grand_finale_prediction(uuid, uuid[]) from public;
+grant execute on function public.submit_grand_finale_prediction(uuid, uuid[]) to authenticated;
 
 -- ============================================================
 -- Waivers. roster_slots is a timeline: a slot's *current* occupancy is the
