@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCoupleDisplayNames, buildPeopleDisplayNames } from "./couple-display";
+import { buildCoupleDisplayNames, buildPeopleDisplayNames, sortJudgesForDisplay } from "./couple-display";
 
 describe("buildCoupleDisplayNames", () => {
   it("shows first name only when there's no collision", () => {
@@ -64,5 +64,33 @@ describe("buildPeopleDisplayNames", () => {
     expect(names.get("1")).toBe("Carrie Ann");
     expect(names.get("2")).toBe("Derek");
     expect(names.get("3")).toBe("Bruno");
+  });
+});
+
+describe("sortJudgesForDisplay", () => {
+  it("orders the regular panel as Carrie Ann, Derek, Bruno regardless of input order", () => {
+    const judges = [
+      { id: "3", name: "Bruno Tonioli" },
+      { id: "1", name: "Carrie Ann Inaba" },
+      { id: "2", name: "Derek Hough" },
+    ];
+    const sorted = sortJudgesForDisplay(judges);
+    expect(sorted.map((j) => j.name)).toEqual(["Carrie Ann Inaba", "Derek Hough", "Bruno Tonioli"]);
+  });
+
+  it("puts a guest judge alphabetically after the three regulars", () => {
+    const judges = [
+      { id: "4", name: "Anna Guest" },
+      { id: "3", name: "Bruno Tonioli" },
+      { id: "1", name: "Carrie Ann Inaba" },
+      { id: "2", name: "Derek Hough" },
+    ];
+    const sorted = sortJudgesForDisplay(judges);
+    expect(sorted.map((j) => j.name)).toEqual([
+      "Carrie Ann Inaba",
+      "Derek Hough",
+      "Bruno Tonioli",
+      "Anna Guest",
+    ]);
   });
 });

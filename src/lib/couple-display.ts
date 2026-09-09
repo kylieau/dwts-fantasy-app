@@ -44,6 +44,21 @@ function buildFirstNameMap(fullNames: string[]): Map<string, string> {
   return result;
 }
 
+// The show's judging panel always appears in this order; a guest judge
+// (not in this list) sorts alphabetically after the three regulars.
+const JUDGE_DISPLAY_ORDER = ["Carrie Ann Inaba", "Derek Hough", "Bruno Tonioli"];
+
+export function sortJudgesForDisplay<T extends { name: string }>(judges: T[]): T[] {
+  return [...judges].sort((a, b) => {
+    const indexA = JUDGE_DISPLAY_ORDER.indexOf(a.name);
+    const indexB = JUDGE_DISPLAY_ORDER.indexOf(b.name);
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 // For a flat list of people (e.g. judges) rather than couples — same
 // first-name-only, collision-disambiguated treatment, just without the
 // celebrity/pro pairing.

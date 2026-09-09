@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminResultsTabs } from "@/components/admin-results-tabs";
 import { resultsEntryOpenToAll } from "@/lib/results";
-import { buildCoupleDisplayNames } from "@/lib/couple-display";
+import { buildCoupleDisplayNames, sortJudgesForDisplay } from "@/lib/couple-display";
 
 export default async function AdminResultsPage() {
   const supabase = await createClient();
@@ -80,7 +80,7 @@ export default async function AdminResultsPage() {
       allCouples={allCouples}
       activeCoupleDisplayNames={Object.fromEntries(buildCoupleDisplayNames(activeCouples))}
       allCoupleDisplayNames={Object.fromEntries(buildCoupleDisplayNames(allCouples))}
-      judges={judges ?? []}
+      judges={sortJudgesForDisplay(judges ?? [])}
       danceStyles={danceStyles ?? []}
       episodes={episodes ?? []}
       danceScores={danceScores ?? []}
