@@ -43,21 +43,24 @@ export default async function LeaguePage({
     notFound();
   }
 
-  if (league.commissioner_id === user.id) {
-    const { data: scoringSettings } = await supabase
-      .from("scoring_settings")
-      .select("scoring_configured")
-      .eq("league_id", id)
-      .single();
+  const { data: scoringSettings } = await supabase
+    .from("scoring_settings")
+    .select("scoring_configured, judges_score_category_enabled, eliminations_category_enabled")
+    .eq("league_id", id)
+    .single();
 
+  if (league.commissioner_id === user.id) {
     if (scoringSettings && !scoringSettings.scoring_configured) {
       redirect(
         `/leagues/${id}/settings?message=${encodeURIComponent(
-          "Review and save Scoring Categories to finish setting up your league"
+          "Review and save Modules to finish setting up your league"
         )}`
       );
     }
   }
+
+  const danceCardOn = scoringSettings?.judges_score_category_enabled ?? true;
+  const curtainCallOn = scoringSettings?.eliminations_category_enabled ?? true;
 
   const [{ data: members }, { data: allScores }, { data: rosterSlots }, { data: allCouples }, { data: upcomingEpisode }] =
     await Promise.all([
@@ -125,7 +128,7 @@ export default async function LeaguePage({
     | { displayName: string; eliminatedLabel: string | null; topScorerLabel: string | null }[]
     | undefined;
 
-  if (upcomingEpisode) {
+  if (upcomingEpisode && curtainCallOn) {
     const { data: computedLockAt } = await supabase.rpc("prediction_lock_at", {
       p_league_id: id,
       p_episode_id: upcomingEpisode.id,
@@ -180,10 +183,12 @@ export default async function LeaguePage({
           {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         </div>
         <div className="flex gap-2">
-          <Button render={<Link href={`/leagues/${id}/draft`} />} size="sm">
-            Draft room
-          </Button>
-          {league.waiver_mode === "waivers" && (
+          {danceCardOn && (
+            <Button render={<Link href={`/leagues/${id}/draft`} />} size="sm">
+              Draft room
+            </Button>
+          )}
+          {danceCardOn && league.waiver_mode === "waivers" && (
             <Button render={<Link href={`/leagues/${id}/waivers`} />} variant="outline" size="sm">
               Waivers
             </Button>
@@ -196,20 +201,22 @@ export default async function LeaguePage({
         </div>
       </div>
 
-      <PickEmBox
-        leagueId={id}
-        episode={upcomingEpisode ?? null}
-        lockAt={lockAt}
-        activeCouples={activeCouples}
-        coupleDisplayNames={Object.fromEntries(activeDisplayNames)}
-        existingPrediction={ownPrediction}
-        isLocked={isLocked}
-        revealedPredictions={revealedPredictions}
-      />
+      {curtainCallOn && (
+        <PickEmBox
+          leagueId={id}
+          episode={upcomingEpisode ?? null}
+          lockAt={lockAt}
+          activeCouples={activeCouples}
+          coupleDisplayNames={Object.fromEntries(activeDisplayNames)}
+          existingPrediction={ownPrediction}
+          isLocked={isLocked}
+          revealedPredictions={revealedPredictions}
+        />
+      )}
 
       <StandingsTable standings={standings} />
 
-      {rosterSlots && rosterSlots.length > 0 && (
+      {danceCardOn && rosterSlots && rosterSlots.length > 0 && (
         <RosterCard
           couples={rosterSlots
             .filter((r) => r.couples)

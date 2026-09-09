@@ -29,6 +29,24 @@ export default async function DraftPage({
     notFound();
   }
 
+  const { data: scoringSettings } = await supabase
+    .from("scoring_settings")
+    .select("judges_score_category_enabled")
+    .eq("league_id", id)
+    .single();
+
+  if (scoringSettings && !scoringSettings.judges_score_category_enabled) {
+    return (
+      <div className="mx-auto flex max-w-md flex-col gap-4 px-4 py-24 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">Dance Card isn&apos;t enabled</h1>
+        <p className="text-sm text-muted-foreground">
+          This league isn&apos;t running the draft/roster module — the commissioner
+          can turn Dance Card on in league settings.
+        </p>
+      </div>
+    );
+  }
+
   const { data: activeSeasonId } = await supabase.rpc("active_season_id");
 
   const [{ data: members }, { data: couples }, { data: picks }] = await Promise.all([

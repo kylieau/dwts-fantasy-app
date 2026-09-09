@@ -583,50 +583,12 @@ begin
 end;
 $$;
 
-create function public.update_scoring_settings(
-  p_league_id uuid,
-  p_judges_score_multiplier numeric,
-  p_survival_points numeric,
-  p_elimination_prediction_points numeric,
-  p_top_scorer_prediction_points numeric,
-  p_first_place_points numeric,
-  p_second_place_points numeric,
-  p_third_place_points numeric
-)
-returns public.scoring_settings
-language plpgsql
-security definer set search_path = ''
-as $$
-declare
-  v_settings public.scoring_settings;
-begin
-  update public.scoring_settings
-  set
-    judges_score_multiplier = p_judges_score_multiplier,
-    survival_points = p_survival_points,
-    elimination_prediction_points = p_elimination_prediction_points,
-    top_scorer_prediction_points = p_top_scorer_prediction_points,
-    first_place_points = p_first_place_points,
-    second_place_points = p_second_place_points,
-    third_place_points = p_third_place_points
-  where league_id = p_league_id
-    and exists (
-      select 1 from public.leagues
-      where id = p_league_id and commissioner_id = auth.uid()
-    )
-  returning * into v_settings;
-
-  if not found then
-    raise exception 'Only the commissioner can update scoring settings';
-  end if;
-
-  return v_settings;
-end;
-$$;
-
--- Separate from update_scoring_settings above (per-event point values) since
--- this covers a distinct concern: which categories run at all, their
--- weights, and Bonus Picks' own configuration.
+-- One function per category's full rule set, rather than splitting "is this
+-- category on" (toggles/weights/timing) from "how many points is X worth"
+-- across two functions/forms — the UI groups everything by category, so the
+-- write path matches. Every per-event point value is included regardless of
+-- which categories are on; the UI only shows/edits the ones that apply, and
+-- an inactive category's fields just keep round-tripping their last value.
 create function public.update_scoring_categories(
   p_league_id uuid,
   p_judges_score_category_enabled boolean,
@@ -639,7 +601,14 @@ create function public.update_scoring_categories(
   p_bonus_picks_deadline timestamptz,
   p_bonus_picks_scoring_method text,
   p_bonus_picks_distance_penalty numeric,
-  p_bonus_picks_tier_size int
+  p_bonus_picks_tier_size int,
+  p_judges_score_multiplier numeric,
+  p_survival_points numeric,
+  p_first_place_points numeric,
+  p_second_place_points numeric,
+  p_third_place_points numeric,
+  p_elimination_prediction_points numeric,
+  p_top_scorer_prediction_points numeric
 )
 returns public.scoring_settings
 language plpgsql
@@ -661,6 +630,13 @@ begin
     bonus_picks_scoring_method = p_bonus_picks_scoring_method,
     bonus_picks_distance_penalty = p_bonus_picks_distance_penalty,
     bonus_picks_tier_size = p_bonus_picks_tier_size,
+    judges_score_multiplier = p_judges_score_multiplier,
+    survival_points = p_survival_points,
+    first_place_points = p_first_place_points,
+    second_place_points = p_second_place_points,
+    third_place_points = p_third_place_points,
+    elimination_prediction_points = p_elimination_prediction_points,
+    top_scorer_prediction_points = p_top_scorer_prediction_points,
     scoring_configured = true
   where league_id = p_league_id
     and exists (
@@ -678,11 +654,9 @@ end;
 $$;
 
 revoke execute on function public.update_league_settings(uuid, text, text, int, numeric) from public;
-revoke execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
-revoke execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int) from public;
+revoke execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
 grant execute on function public.update_league_settings(uuid, text, text, int, numeric) to authenticated;
-grant execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to authenticated;
-grant execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int) to authenticated;
+grant execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to authenticated;
 
 -- ============================================================
 -- Draft: couples are global read-only reference data; starting the draft and
@@ -735,6 +709,13 @@ begin
     raise exception 'Only the commissioner can set the draft order';
   end if;
 
+  if not exists (
+    select 1 from public.scoring_settings
+    where league_id = p_league_id and judges_score_category_enabled
+  ) then
+    raise exception 'Dance Card is not enabled for this league';
+  end if;
+
   if v_league.draft_status <> 'not_started' then
     raise exception 'Draft order can only be set before the draft starts';
   end if;
@@ -780,6 +761,13 @@ begin
 
   if not found or v_league.commissioner_id <> auth.uid() then
     raise exception 'Only the commissioner can start the draft';
+  end if;
+
+  if not exists (
+    select 1 from public.scoring_settings
+    where league_id = p_league_id and judges_score_category_enabled
+  ) then
+    raise exception 'Dance Card is not enabled for this league';
   end if;
 
   if v_league.draft_status <> 'not_started' then
@@ -840,6 +828,13 @@ begin
 
   if not found then
     raise exception 'League not found';
+  end if;
+
+  if not exists (
+    select 1 from public.scoring_settings
+    where league_id = p_league_id and judges_score_category_enabled
+  ) then
+    raise exception 'Dance Card is not enabled for this league';
   end if;
 
   if v_league.draft_status <> 'in_progress' then
@@ -1012,6 +1007,13 @@ begin
     raise exception 'You are not a member of this league';
   end if;
 
+  if not exists (
+    select 1 from public.scoring_settings
+    where league_id = p_league_id and eliminations_category_enabled
+  ) then
+    raise exception 'Curtain Call is not enabled for this league';
+  end if;
+
   if not exists (select 1 from public.episodes where id = p_episode_id) then
     raise exception 'Episode not found';
   end if;
@@ -1139,6 +1141,13 @@ begin
   -- claims for the same league so two FCFS claims for the same couple can't
   -- both see it as "available" at once.
   select * into v_league from public.leagues where id = p_league_id for update;
+
+  if not exists (
+    select 1 from public.scoring_settings
+    where league_id = p_league_id and judges_score_category_enabled
+  ) then
+    raise exception 'Dance Card is not enabled for this league';
+  end if;
 
   if v_league.waiver_mode <> 'waivers' then
     raise exception 'This league does not use waivers';
