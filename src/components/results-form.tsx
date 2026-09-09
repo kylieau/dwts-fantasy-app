@@ -400,7 +400,7 @@ export function ResultsForm({
             </label>
           </div>
           <div className="flex flex-col gap-2 sm:col-span-2">
-            <Label>Judges this episode</Label>
+            <Label>Judges</Label>
             <div className="flex flex-wrap gap-3">
               {judges.map((j) => (
                 <label key={j.id} className="flex items-center gap-1 text-sm">

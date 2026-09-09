@@ -62,7 +62,7 @@ export function AdminResultsTabs({
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-12">
-      <h1 className="text-2xl font-semibold tracking-tight">Admin — Results</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
       <div className="flex gap-2 border-b border-border pb-2">
         <Button
           size="sm"
