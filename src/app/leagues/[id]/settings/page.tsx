@@ -76,6 +76,9 @@ export default async function LeagueSettingsPage({
     .eq("week_number", 1)
     .maybeSingle();
 
+  const draftFantasyOn = scoringSettings?.judges_score_category_enabled ?? true;
+  const weeklyPickEmOn = scoringSettings?.eliminations_category_enabled ?? true;
+
   const boundUpdateLeagueSettings = updateLeagueSettings.bind(null, id);
   const boundUpdateScoringSettings = updateScoringSettings.bind(null, id);
 
@@ -219,111 +222,172 @@ export default async function LeagueSettingsPage({
       <Card>
         <CardHeader>
           <CardTitle>Scoring Settings</CardTitle>
-          <CardDescription>How points are awarded each week.</CardDescription>
+          <CardDescription>
+            Per-event point values, grouped by which category they belong to. A
+            field only shows up here if that category is turned on above.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {!isCommissioner ? (
-            <div className="flex flex-col">
-              <SettingRow label="Judges' Score Multiplier" value={scoringSettings?.judges_score_multiplier} />
-              <SettingRow label="Survival Points" value={scoringSettings?.survival_points} />
-              <SettingRow
-                label="Elimination Prediction Points"
-                value={scoringSettings?.elimination_prediction_points}
-              />
-              <SettingRow
-                label="Top Scorer Prediction Points"
-                value={scoringSettings?.top_scorer_prediction_points}
-              />
-              <SettingRow label="1st Place Bonus" value={scoringSettings?.first_place_points} />
-              <SettingRow label="2nd Place Bonus" value={scoringSettings?.second_place_points} />
-              <SettingRow label="3rd Place Bonus" value={scoringSettings?.third_place_points} />
+          {!draftFantasyOn && !weeklyPickEmOn ? (
+            <p className="text-sm text-muted-foreground">
+              Full-Order Prediction doesn&apos;t use per-event point values — it
+              has its own deadline and scoring method above instead. Nothing to
+              configure here unless Draft Fantasy or Weekly Pick &apos;Em is on.
+            </p>
+          ) : !isCommissioner ? (
+            <div className="flex flex-col gap-4">
+              {draftFantasyOn && (
+                <div className="flex flex-col">
+                  <p className="pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Draft Fantasy
+                  </p>
+                  <SettingRow label="Judges' Score Multiplier" value={scoringSettings?.judges_score_multiplier} />
+                  <SettingRow label="Survival Points" value={scoringSettings?.survival_points} />
+                  <SettingRow label="1st Place Bonus" value={scoringSettings?.first_place_points} />
+                  <SettingRow label="2nd Place Bonus" value={scoringSettings?.second_place_points} />
+                  <SettingRow label="3rd Place Bonus" value={scoringSettings?.third_place_points} />
+                </div>
+              )}
+              {weeklyPickEmOn && (
+                <div className="flex flex-col">
+                  <p className="pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Weekly Pick &apos;Em
+                  </p>
+                  <SettingRow
+                    label="Elimination Prediction Points"
+                    value={scoringSettings?.elimination_prediction_points}
+                  />
+                  <SettingRow
+                    label="Top Scorer Prediction Points"
+                    value={scoringSettings?.top_scorer_prediction_points}
+                  />
+                </div>
+              )}
             </div>
           ) : (
           <form action={boundUpdateScoringSettings} className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="judgesScoreMultiplier">Judges&apos; Score Multiplier</Label>
-                <Input
-                  id="judgesScoreMultiplier"
-                  name="judgesScoreMultiplier"
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  defaultValue={scoringSettings?.judges_score_multiplier}
-                  required
-                />
+            {draftFantasyOn ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Draft Fantasy
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="judgesScoreMultiplier">Judges&apos; Score Multiplier</Label>
+                    <Input
+                      id="judgesScoreMultiplier"
+                      name="judgesScoreMultiplier"
+                      type="number"
+                      step="0.1"
+                      min={0}
+                      defaultValue={scoringSettings?.judges_score_multiplier}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="survivalPoints">Survival Points</Label>
+                    <Input
+                      id="survivalPoints"
+                      name="survivalPoints"
+                      type="number"
+                      min={0}
+                      defaultValue={scoringSettings?.survival_points}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="firstPlacePoints">1st Place Bonus</Label>
+                    <Input
+                      id="firstPlacePoints"
+                      name="firstPlacePoints"
+                      type="number"
+                      min={0}
+                      defaultValue={scoringSettings?.first_place_points}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="secondPlacePoints">2nd Place Bonus</Label>
+                    <Input
+                      id="secondPlacePoints"
+                      name="secondPlacePoints"
+                      type="number"
+                      min={0}
+                      defaultValue={scoringSettings?.second_place_points}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="thirdPlacePoints">3rd Place Bonus</Label>
+                    <Input
+                      id="thirdPlacePoints"
+                      name="thirdPlacePoints"
+                      type="number"
+                      min={0}
+                      defaultValue={scoringSettings?.third_place_points}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="survivalPoints">Survival Points</Label>
-                <Input
-                  id="survivalPoints"
-                  name="survivalPoints"
-                  type="number"
-                  min={0}
-                  defaultValue={scoringSettings?.survival_points}
-                  required
-                />
+            ) : (
+              <>
+                <input type="hidden" name="judgesScoreMultiplier" value={scoringSettings?.judges_score_multiplier ?? 1} />
+                <input type="hidden" name="survivalPoints" value={scoringSettings?.survival_points ?? 0} />
+                <input type="hidden" name="firstPlacePoints" value={scoringSettings?.first_place_points ?? 0} />
+                <input type="hidden" name="secondPlacePoints" value={scoringSettings?.second_place_points ?? 0} />
+                <input type="hidden" name="thirdPlacePoints" value={scoringSettings?.third_place_points ?? 0} />
+              </>
+            )}
+
+            {weeklyPickEmOn ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Weekly Pick &apos;Em
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="eliminationPredictionPoints">
+                      Elimination Prediction Points
+                    </Label>
+                    <Input
+                      id="eliminationPredictionPoints"
+                      name="eliminationPredictionPoints"
+                      type="number"
+                      min={0}
+                      defaultValue={scoringSettings?.elimination_prediction_points}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="topScorerPredictionPoints">
+                      Top Scorer Prediction Points
+                    </Label>
+                    <Input
+                      id="topScorerPredictionPoints"
+                      name="topScorerPredictionPoints"
+                      type="number"
+                      min={0}
+                      defaultValue={scoringSettings?.top_scorer_prediction_points}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="eliminationPredictionPoints">
-                  Elimination Prediction Points
-                </Label>
-                <Input
-                  id="eliminationPredictionPoints"
+            ) : (
+              <>
+                <input
+                  type="hidden"
                   name="eliminationPredictionPoints"
-                  type="number"
-                  min={0}
-                  defaultValue={scoringSettings?.elimination_prediction_points}
-                  required
+                  value={scoringSettings?.elimination_prediction_points ?? 0}
                 />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="topScorerPredictionPoints">
-                  Top Scorer Prediction Points
-                </Label>
-                <Input
-                  id="topScorerPredictionPoints"
+                <input
+                  type="hidden"
                   name="topScorerPredictionPoints"
-                  type="number"
-                  min={0}
-                  defaultValue={scoringSettings?.top_scorer_prediction_points}
-                  required
+                  value={scoringSettings?.top_scorer_prediction_points ?? 0}
                 />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="firstPlacePoints">1st Place Bonus</Label>
-                <Input
-                  id="firstPlacePoints"
-                  name="firstPlacePoints"
-                  type="number"
-                  min={0}
-                  defaultValue={scoringSettings?.first_place_points}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="secondPlacePoints">2nd Place Bonus</Label>
-                <Input
-                  id="secondPlacePoints"
-                  name="secondPlacePoints"
-                  type="number"
-                  min={0}
-                  defaultValue={scoringSettings?.second_place_points}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="thirdPlacePoints">3rd Place Bonus</Label>
-                <Input
-                  id="thirdPlacePoints"
-                  name="thirdPlacePoints"
-                  type="number"
-                  min={0}
-                  defaultValue={scoringSettings?.third_place_points}
-                  required
-                />
-              </div>
-            </div>
+              </>
+            )}
 
             <Button type="submit">Save scoring settings</Button>
           </form>
