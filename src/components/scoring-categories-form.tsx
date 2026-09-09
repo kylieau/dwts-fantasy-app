@@ -148,7 +148,7 @@ export function ScoringCategoriesForm({
                 checked={judgesEnabled}
                 onChange={(e) => setJudgesEnabled(e.target.checked)}
               />
-              Judges&apos; Scores (Draft Fantasy)
+              Draft Fantasy
             </label>
             {judgesEnabled && (
               <div className="flex items-center gap-2">
