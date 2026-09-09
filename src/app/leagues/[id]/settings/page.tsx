@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updateLeagueSettings, updateScoringSettings } from "./actions";
+import { ScoringCategoriesForm } from "@/components/scoring-categories-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +73,8 @@ export default async function LeagueSettingsPage({
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         {message && <p className="mt-2 text-sm text-muted-foreground">{message}</p>}
       </div>
+
+      <ScoringCategoriesForm leagueId={id} scoringSettings={scoringSettings} />
 
       <Card>
         <CardHeader>

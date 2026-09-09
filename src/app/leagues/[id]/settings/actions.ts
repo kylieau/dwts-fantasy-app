@@ -28,6 +28,47 @@ export async function updateLeagueSettings(leagueId: string, formData: FormData)
   redirect(`/leagues/${leagueId}/settings?message=${encodeURIComponent("League settings saved")}`);
 }
 
+export type ScoringCategoriesInput = {
+  judgesScoreCategoryEnabled: boolean;
+  eliminationsCategoryEnabled: boolean;
+  bonusPicksCategoryEnabled: boolean;
+  judgesScoreCategoryWeight: number;
+  eliminationsCategoryWeight: number;
+  bonusPicksCategoryWeight: number;
+  judgesScoreStartsWeek: 1 | 2;
+  bonusPicksDeadline: string | null;
+  bonusPicksScoringMethod: "exact_position" | "distance_based" | "binary_tier" | null;
+  bonusPicksDistancePenalty: number | null;
+  bonusPicksTierSize: number | null;
+};
+
+export async function updateScoringCategories(
+  leagueId: string,
+  input: ScoringCategoriesInput
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("update_scoring_categories", {
+    p_league_id: leagueId,
+    p_judges_score_category_enabled: input.judgesScoreCategoryEnabled,
+    p_eliminations_category_enabled: input.eliminationsCategoryEnabled,
+    p_bonus_picks_category_enabled: input.bonusPicksCategoryEnabled,
+    p_judges_score_category_weight: input.judgesScoreCategoryWeight,
+    p_eliminations_category_weight: input.eliminationsCategoryWeight,
+    p_bonus_picks_category_weight: input.bonusPicksCategoryWeight,
+    p_judges_score_starts_week: input.judgesScoreStartsWeek,
+    p_bonus_picks_deadline: input.bonusPicksDeadline,
+    p_bonus_picks_scoring_method: input.bonusPicksScoringMethod,
+    p_bonus_picks_distance_penalty: input.bonusPicksDistancePenalty,
+    p_bonus_picks_tier_size: input.bonusPicksTierSize,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/leagues/${leagueId}/settings`);
+  return { error: null };
+}
+
 export async function updateScoringSettings(leagueId: string, formData: FormData) {
   const supabase = await createClient();
 

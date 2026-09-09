@@ -588,9 +588,20 @@ export type Database = {
       }
       scoring_settings: {
         Row: {
+          bonus_picks_category_enabled: boolean
+          bonus_picks_category_weight: number
+          bonus_picks_deadline: string | null
+          bonus_picks_distance_penalty: number | null
+          bonus_picks_scoring_method: string | null
+          bonus_picks_tier_size: number | null
+          eliminations_category_enabled: boolean
+          eliminations_category_weight: number
           elimination_prediction_points: number
           first_place_points: number
+          judges_score_category_enabled: boolean
+          judges_score_category_weight: number
           judges_score_multiplier: number
+          judges_score_starts_week: number
           league_id: string
           second_place_points: number
           survival_points: number
@@ -598,9 +609,20 @@ export type Database = {
           top_scorer_prediction_points: number
         }
         Insert: {
+          bonus_picks_category_enabled?: boolean
+          bonus_picks_category_weight?: number
+          bonus_picks_deadline?: string | null
+          bonus_picks_distance_penalty?: number | null
+          bonus_picks_scoring_method?: string | null
+          bonus_picks_tier_size?: number | null
+          eliminations_category_enabled?: boolean
+          eliminations_category_weight?: number
           elimination_prediction_points?: number
           first_place_points?: number
+          judges_score_category_enabled?: boolean
+          judges_score_category_weight?: number
           judges_score_multiplier?: number
+          judges_score_starts_week?: number
           league_id: string
           second_place_points?: number
           survival_points?: number
@@ -608,9 +630,20 @@ export type Database = {
           top_scorer_prediction_points?: number
         }
         Update: {
+          bonus_picks_category_enabled?: boolean
+          bonus_picks_category_weight?: number
+          bonus_picks_deadline?: string | null
+          bonus_picks_distance_penalty?: number | null
+          bonus_picks_scoring_method?: string | null
+          bonus_picks_tier_size?: number | null
+          eliminations_category_enabled?: boolean
+          eliminations_category_weight?: number
           elimination_prediction_points?: number
           first_place_points?: number
+          judges_score_category_enabled?: boolean
+          judges_score_category_weight?: number
           judges_score_multiplier?: number
+          judges_score_starts_week?: number
           league_id?: string
           second_place_points?: number
           survival_points?: number
@@ -1025,6 +1058,49 @@ export type Database = {
           elimination_prediction_points: number
           first_place_points: number
           judges_score_multiplier: number
+          league_id: string
+          second_place_points: number
+          survival_points: number
+          third_place_points: number
+          top_scorer_prediction_points: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "scoring_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_scoring_categories: {
+        Args: {
+          p_bonus_picks_category_enabled: boolean
+          p_bonus_picks_category_weight: number
+          p_bonus_picks_deadline: string | null
+          p_bonus_picks_distance_penalty: number | null
+          p_bonus_picks_scoring_method: string | null
+          p_bonus_picks_tier_size: number | null
+          p_eliminations_category_enabled: boolean
+          p_eliminations_category_weight: number
+          p_judges_score_category_enabled: boolean
+          p_judges_score_category_weight: number
+          p_judges_score_starts_week: number
+          p_league_id: string
+        }
+        Returns: {
+          bonus_picks_category_enabled: boolean
+          bonus_picks_category_weight: number
+          bonus_picks_deadline: string | null
+          bonus_picks_distance_penalty: number | null
+          bonus_picks_scoring_method: string | null
+          bonus_picks_tier_size: number | null
+          eliminations_category_enabled: boolean
+          eliminations_category_weight: number
+          elimination_prediction_points: number
+          first_place_points: number
+          judges_score_category_enabled: boolean
+          judges_score_category_weight: number
+          judges_score_multiplier: number
+          judges_score_starts_week: number
           league_id: string
           second_place_points: number
           survival_points: number

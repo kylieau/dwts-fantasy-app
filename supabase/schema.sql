@@ -101,6 +101,24 @@ create table league_members (
   unique (league_id, draft_position)
 );
 
+-- judges_score_multiplier..third_place_points: per-event point values within
+-- the Judges' Scores category (draft fantasy) and the Eliminations category
+-- (elimination_prediction_points/top_scorer_prediction_points — both weekly
+-- Pick 'Em guesses, folded into one "Eliminations" category total).
+--
+-- *_category_enabled/*_category_weight: a league opts into any subset of the
+-- three categories (Judges' Scores / Eliminations / Bonus Picks) and weights
+-- each independently — Standings sums roster/prediction/bonus-pick points
+-- multiplied by their category's weight, not a flat total. At least one
+-- category must stay on (see at_least_one_category_enabled below).
+--
+-- judges_score_starts_week: if the draft is deferred until before Week 2,
+-- Week 1 doesn't count toward Judges' Scores (no roster existed yet).
+--
+-- bonus_picks_*: the season-long full-elimination-order prediction (made
+-- once, tracked as weeks resolve). Only meaningful when
+-- bonus_picks_category_enabled — see bonus_picks_config_required below for
+-- what "configured" requires per scoring method.
 create table scoring_settings (
   league_id uuid primary key references leagues(id) on delete cascade,
   judges_score_multiplier numeric not null default 1.0,
@@ -109,7 +127,33 @@ create table scoring_settings (
   top_scorer_prediction_points numeric not null default 20, -- 0 disables
   first_place_points numeric not null default 150,
   second_place_points numeric not null default 75,
-  third_place_points numeric not null default 40
+  third_place_points numeric not null default 40,
+
+  judges_score_category_enabled boolean not null default true,
+  eliminations_category_enabled boolean not null default true,
+  bonus_picks_category_enabled boolean not null default false,
+  judges_score_category_weight numeric not null default 1,
+  eliminations_category_weight numeric not null default 1,
+  bonus_picks_category_weight numeric not null default 1,
+
+  judges_score_starts_week int not null default 1 check (judges_score_starts_week in (1, 2)),
+
+  bonus_picks_deadline timestamptz,
+  bonus_picks_scoring_method text check (bonus_picks_scoring_method in ('exact_position', 'distance_based', 'binary_tier')),
+  bonus_picks_distance_penalty numeric, -- points docked per position off; only used by 'distance_based'
+  bonus_picks_tier_size int, -- e.g. 3 for "top 3"; only used by 'binary_tier'
+
+  constraint at_least_one_category_enabled check (
+    judges_score_category_enabled or eliminations_category_enabled or bonus_picks_category_enabled
+  ),
+  constraint bonus_picks_config_required check (
+    (not bonus_picks_category_enabled) or (
+      bonus_picks_deadline is not null
+      and bonus_picks_scoring_method is not null
+      and (bonus_picks_scoring_method != 'distance_based' or bonus_picks_distance_penalty is not null)
+      and (bonus_picks_scoring_method != 'binary_tier' or bonus_picks_tier_size is not null)
+    )
+  )
 );
 
 -- ============================================================
@@ -573,10 +617,64 @@ begin
 end;
 $$;
 
+-- Separate from update_scoring_settings above (per-event point values) since
+-- this covers a distinct concern: which categories run at all, their
+-- weights, and Bonus Picks' own configuration.
+create function public.update_scoring_categories(
+  p_league_id uuid,
+  p_judges_score_category_enabled boolean,
+  p_eliminations_category_enabled boolean,
+  p_bonus_picks_category_enabled boolean,
+  p_judges_score_category_weight numeric,
+  p_eliminations_category_weight numeric,
+  p_bonus_picks_category_weight numeric,
+  p_judges_score_starts_week int,
+  p_bonus_picks_deadline timestamptz,
+  p_bonus_picks_scoring_method text,
+  p_bonus_picks_distance_penalty numeric,
+  p_bonus_picks_tier_size int
+)
+returns public.scoring_settings
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_settings public.scoring_settings;
+begin
+  update public.scoring_settings
+  set
+    judges_score_category_enabled = p_judges_score_category_enabled,
+    eliminations_category_enabled = p_eliminations_category_enabled,
+    bonus_picks_category_enabled = p_bonus_picks_category_enabled,
+    judges_score_category_weight = p_judges_score_category_weight,
+    eliminations_category_weight = p_eliminations_category_weight,
+    bonus_picks_category_weight = p_bonus_picks_category_weight,
+    judges_score_starts_week = p_judges_score_starts_week,
+    bonus_picks_deadline = p_bonus_picks_deadline,
+    bonus_picks_scoring_method = p_bonus_picks_scoring_method,
+    bonus_picks_distance_penalty = p_bonus_picks_distance_penalty,
+    bonus_picks_tier_size = p_bonus_picks_tier_size
+  where league_id = p_league_id
+    and exists (
+      select 1 from public.leagues
+      where id = p_league_id and commissioner_id = auth.uid()
+    )
+  returning * into v_settings;
+
+  if not found then
+    raise exception 'Only the commissioner can update scoring categories';
+  end if;
+
+  return v_settings;
+end;
+$$;
+
 revoke execute on function public.update_league_settings(uuid, text, text, int, numeric) from public;
 revoke execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
+revoke execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int) from public;
 grant execute on function public.update_league_settings(uuid, text, text, int, numeric) to authenticated;
 grant execute on function public.update_scoring_settings(uuid, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to authenticated;
+grant execute on function public.update_scoring_categories(uuid, boolean, boolean, boolean, numeric, numeric, numeric, int, timestamptz, text, numeric, int) to authenticated;
 
 -- ============================================================
 -- Draft: couples are global read-only reference data; starting the draft and
