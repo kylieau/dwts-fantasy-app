@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Mirrorball Madness',
   webDir: 'public',
   server: {
-    url: 'https://dwts-fantasy-app-six.vercel.app',
+    url: 'https://dwts-fantasy-mirrorball-madness.vercel.app',
     // Supabase auth redirects (OAuth, magic links) can briefly navigate
     // the WebView to the Supabase project domain before bouncing back.
     allowNavigation: ['wssbwgtsejamlbvfofvu.supabase.co']
