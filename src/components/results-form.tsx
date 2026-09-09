@@ -370,16 +370,6 @@ export function ResultsForm({
                 <Label className="text-xs text-muted-foreground">Theme</Label>
                 <p className="text-sm">{selectedEpisode.theme ?? "—"}</p>
               </div>
-              <div className="flex flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">Elimination / Finale</Label>
-                <p className="text-sm">
-                  {selectedEpisode.is_finale
-                    ? "Finale"
-                    : selectedEpisode.is_elimination_week
-                      ? "Elimination week"
-                      : "No elimination"}
-                </p>
-              </div>
             </>
           )}
           <div className="flex flex-col gap-2">
