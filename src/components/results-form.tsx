@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildPeopleDisplayNames } from "@/lib/couple-display";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 type Named = { id: string; name: string };
@@ -91,6 +92,7 @@ export function ResultsForm({
   const [selectedCoupleId, setSelectedCoupleId] = useState("");
   const [selectedDanceStyleId, setSelectedDanceStyleId] = useState("");
   const [judgeScoreInputs, setJudgeScoreInputs] = useState<Record<string, string>>({});
+  const [editingKey, setEditingKey] = useState<string | null>(null);
 
   const [submittedDances, setSubmittedDances] = useState<SubmittedDance[]>([]);
   const [buckets, setBuckets] = useState<Record<string, Buckets>>(() =>
@@ -111,13 +113,16 @@ export function ResultsForm({
     couples.map((c) => [c.id, coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`])
   );
   const danceStyleItems = Object.fromEntries(danceStyles.map((d) => [d.id, d.name]));
+  const judgeDisplayNames = buildPeopleDisplayNames(judges);
 
+  const editingCoupleId = submittedDances.find((d) => d.key === editingKey)?.coupleId;
   const danceCountByCouple = new Map<string, number>();
   for (const d of submittedDances) {
+    if (d.key === editingKey) continue;
     danceCountByCouple.set(d.coupleId, (danceCountByCouple.get(d.coupleId) ?? 0) + 1);
   }
   const availableCouples = couples.filter(
-    (c) => (danceCountByCouple.get(c.id) ?? 0) < expectedDanceCount
+    (c) => c.id === editingCoupleId || (danceCountByCouple.get(c.id) ?? 0) < expectedDanceCount
   );
 
   function toggleJudge(judgeId: string) {
@@ -129,28 +134,56 @@ export function ResultsForm({
     });
   }
 
-  function addDanceSubmission() {
+  function submitDanceEntry() {
     if (!selectedCoupleId || !selectedDanceStyleId) return;
     const judgeScores = activeJudges
       .map((j) => ({ judgeId: j.id, score: Number(judgeScoreInputs[j.id]) }))
       .filter((js) => !Number.isNaN(js.score));
 
-    setSubmittedDances((prev) => [
-      ...prev,
-      {
-        key: `${Date.now()}-${Math.random()}`,
-        coupleId: selectedCoupleId,
-        danceStyleId: selectedDanceStyleId,
-        judgeScores,
-      },
-    ]);
+    if (editingKey) {
+      setSubmittedDances((prev) =>
+        prev.map((d) =>
+          d.key === editingKey
+            ? { ...d, coupleId: selectedCoupleId, danceStyleId: selectedDanceStyleId, judgeScores }
+            : d
+        )
+      );
+      setEditingKey(null);
+    } else {
+      setSubmittedDances((prev) => [
+        ...prev,
+        {
+          key: `${Date.now()}-${Math.random()}`,
+          coupleId: selectedCoupleId,
+          danceStyleId: selectedDanceStyleId,
+          judgeScores,
+        },
+      ]);
+    }
     setSelectedCoupleId("");
     setSelectedDanceStyleId("");
     setJudgeScoreInputs({});
   }
 
-  function removeDanceSubmission(key: string) {
+  function startEditDanceSubmission(d: SubmittedDance) {
+    setEditingKey(d.key);
+    setSelectedCoupleId(d.coupleId);
+    setSelectedDanceStyleId(d.danceStyleId);
+    setJudgeScoreInputs(
+      Object.fromEntries(d.judgeScores.map((js) => [js.judgeId, String(js.score)]))
+    );
+  }
+
+  function cancelEditDanceSubmission() {
+    setEditingKey(null);
+    setSelectedCoupleId("");
+    setSelectedDanceStyleId("");
+    setJudgeScoreInputs({});
+  }
+
+  function deleteDanceSubmission(key: string) {
     setSubmittedDances((prev) => prev.filter((d) => d.key !== key));
+    if (editingKey === key) cancelEditDanceSubmission();
   }
 
   function toggleBucket(coupleId: string, bucket: keyof Buckets) {
@@ -357,7 +390,9 @@ export function ResultsForm({
           <div className="flex flex-wrap items-end gap-3">
             {activeJudges.map((j) => (
               <div key={j.id} className="flex flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">{j.name}</Label>
+                <Label className="text-xs text-muted-foreground">
+                  {judgeDisplayNames.get(j.id) ?? j.name}
+                </Label>
                 <Input
                   className="w-20"
                   placeholder="—"
@@ -374,11 +409,25 @@ export function ResultsForm({
             </div>
             <Button
               size="sm"
-              onClick={addDanceSubmission}
+              onClick={submitDanceEntry}
               disabled={!selectedCoupleId || !selectedDanceStyleId}
             >
-              Submit
+              {editingKey ? "Save changes" : "Submit"}
             </Button>
+            {editingKey && (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => deleteDanceSubmission(editingKey)}
+                >
+                  Delete
+                </Button>
+                <Button size="sm" variant="ghost" onClick={cancelEditDanceSubmission}>
+                  Cancel
+                </Button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -386,7 +435,7 @@ export function ResultsForm({
       {submittedDances.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Dances entered this episode</CardTitle>
+            <CardTitle>Dance Results Submitted</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {submittedDances.map((d) => {
@@ -400,8 +449,8 @@ export function ResultsForm({
                   <span>
                     {coupleDisplayNames[d.coupleId] ?? "Unknown"} — {styleName}: {total}
                   </span>
-                  <Button variant="ghost" size="sm" onClick={() => removeDanceSubmission(d.key)}>
-                    Remove
+                  <Button variant="ghost" size="sm" onClick={() => startEditDanceSubmission(d)}>
+                    Edit
                   </Button>
                 </div>
               );

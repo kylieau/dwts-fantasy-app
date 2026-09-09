@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildPeopleDisplayNames } from "@/lib/couple-display";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 type Named = { id: string; name: string };
@@ -54,7 +55,7 @@ export function AllResultsView({
   const [view, setView] = useState<"week" | "couple">("week");
 
   const danceStyleById = new Map(danceStyles.map((d) => [d.id, d.name]));
-  const judgeById = new Map(judges.map((j) => [j.id, j.name]));
+  const judgeById = buildPeopleDisplayNames(judges);
 
   const judgeScoresByDance = new Map<string, JudgeScore[]>();
   for (const js of judgeScores) {
