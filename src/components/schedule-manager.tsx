@@ -193,7 +193,9 @@ export function ScheduleManager({ episodes }: { episodes: Episode[] }) {
                     }`}
                   >
                     <td className="whitespace-nowrap p-2 font-medium">{e.week_number}</td>
-                    <td className="whitespace-nowrap p-2">{new Date(e.airs_at).toLocaleDateString()}</td>
+                    <td className="whitespace-nowrap p-2">
+                      {new Date(e.airs_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    </td>
                     <td className="p-2">{e.theme ?? "—"}</td>
                     <td className="whitespace-nowrap p-2">
                       {e.is_finale ? "Finale" : !e.is_elimination_week ? "No elimination" : "—"}
