@@ -47,11 +47,12 @@ export function GrandFinaleBox({
   deadline: string | null;
   isLocked: boolean;
 }) {
-  const defaultOrder = [...couples]
-    .sort((a, b) => a.celebrity_name.localeCompare(b.celebrity_name))
-    .map((c) => c.id);
+  const alphabeticalCouples = [...couples].sort((a, b) => a.celebrity_name.localeCompare(b.celebrity_name));
 
-  const [order, setOrder] = useState<string[]>(existingOrder ?? defaultOrder);
+  // Editing an existing prediction skips straight to the reorder step,
+  // pre-filled — only a brand-new prediction starts with tap-to-build.
+  const [phase, setPhase] = useState<"select" | "edit">(existingOrder ? "edit" : "select");
+  const [order, setOrder] = useState<string[]>(existingOrder ?? []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -63,6 +64,21 @@ export function GrandFinaleBox({
     return coupleNameNode(
       coupleDisplayNames[coupleId] ?? { celebrity: c?.celebrity_name ?? "Unknown", pro: c?.pro_name ?? "Unknown" }
     );
+  }
+
+  function tapCouple(coupleId: string) {
+    const next = [...order, coupleId];
+    setOrder(next);
+    if (next.length === couples.length) setPhase("edit");
+  }
+
+  function undoLastTap() {
+    setOrder(order.slice(0, -1));
+  }
+
+  function startOver() {
+    setOrder([]);
+    setPhase("select");
   }
 
   function moveEntry(index: number, direction: -1 | 1) {
@@ -112,12 +128,65 @@ export function GrandFinaleBox({
     );
   }
 
+  if (phase === "select") {
+    const remaining = alphabeticalCouples.filter((c) => !order.includes(c.id));
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Grand Finale</CardTitle>
+          <CardDescription>
+            Tap couples in the order you think they&apos;ll be eliminated — first tap is who goes home first, last is your predicted winner.
+            {deadline ? ` Locks at ${new Date(deadline).toLocaleString()}.` : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {order.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Your order so far
+              </p>
+              {order.map((coupleId, i) => (
+                <div key={coupleId} className="flex items-center justify-between text-sm">
+                  <span>
+                    {i + 1}. {nameFor(coupleId)}
+                  </span>
+                </div>
+              ))}
+              <Button variant="ghost" size="sm" className="self-start" onClick={undoLastTap}>
+                Undo last tap
+              </Button>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {order.length === 0 ? "Tap who's eliminated first" : "Tap who's eliminated next"}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {remaining.map((c) => (
+                <Button
+                  key={c.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => tapCouple(c.id)}
+                >
+                  {nameFor(c.id)}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Grand Finale</CardTitle>
         <CardDescription>
-          Predict the full order of elimination, first out to season winner.
+          Review your predicted order, first eliminated to season winner. Use the arrows to fine-tune.
           {deadline ? ` Locks at ${new Date(deadline).toLocaleString()}.` : ""}
         </CardDescription>
       </CardHeader>
@@ -156,9 +225,14 @@ export function GrandFinaleBox({
           ))}
         </div>
 
-        <Button onClick={handleSubmit} disabled={submitting} className="self-start">
-          {submitting ? "Saving..." : "Save prediction"}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? "Saving..." : "Save prediction"}
+          </Button>
+          <Button variant="outline" onClick={startOver} disabled={submitting}>
+            Start over
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
