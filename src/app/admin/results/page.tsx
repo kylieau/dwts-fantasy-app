@@ -32,8 +32,11 @@ export default async function AdminResultsPage() {
   const [
     { data: activeCouplesRaw },
     { data: allCouplesRaw },
+    { data: judges },
+    { data: danceStyles },
     { data: episodes },
     { data: danceScores },
+    { data: judgeScores },
     { data: episodeResults },
   ] = await Promise.all([
     supabase
@@ -42,11 +45,21 @@ export default async function AdminResultsPage() {
       .eq("status", "active")
       .eq("season_id", activeSeasonId ?? ""),
     supabase.from("couples").select(coupleFields),
-    supabase.from("episodes").select("id, week_number, airs_at, status, is_finale").order("week_number"),
-    supabase.from("dance_scores").select("episode_id, couple_id, total_score"),
+    supabase.from("people").select("id, name").eq("role", "judge").order("name"),
+    supabase.from("dance_styles").select("id, name").order("name"),
+    supabase
+      .from("episodes")
+      .select("id, week_number, airs_at, theme, status, is_finale")
+      .order("week_number"),
+    supabase
+      .from("dance_scores")
+      .select("id, episode_id, couple_id, dance_style_id, total_score"),
+    supabase.from("judge_scores").select("dance_score_id, judge_id, score"),
     supabase
       .from("episode_results")
-      .select("episode_id, couple_id, outcome, was_bottom_two, saved_by_judges"),
+      .select(
+        "episode_id, couple_id, outcome, was_bottom_two, was_bottom_three, saved_by_judges, was_team_dance"
+      ),
   ]);
 
   const flatten = (rows: typeof activeCouplesRaw) =>
@@ -67,8 +80,11 @@ export default async function AdminResultsPage() {
       allCouples={allCouples}
       activeCoupleDisplayNames={Object.fromEntries(buildCoupleDisplayNames(activeCouples))}
       allCoupleDisplayNames={Object.fromEntries(buildCoupleDisplayNames(allCouples))}
+      judges={judges ?? []}
+      danceStyles={danceStyles ?? []}
       episodes={episodes ?? []}
       danceScores={danceScores ?? []}
+      judgeScores={judgeScores ?? []}
       episodeResults={episodeResults ?? []}
     />
   );

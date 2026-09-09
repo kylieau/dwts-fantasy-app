@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCoupleDisplayNames } from "./couple-display";
+import { buildCoupleDisplayNames, buildPeopleDisplayNames } from "./couple-display";
 
 describe("buildCoupleDisplayNames", () => {
   it("shows first name only when there's no collision", () => {
@@ -50,5 +50,19 @@ describe("buildCoupleDisplayNames", () => {
     const names = buildCoupleDisplayNames(couples);
     expect(names.get("1")).toBe("Alex S. & Witney");
     expect(names.get("2")).toBe("Alex J. & Emma");
+  });
+});
+
+describe("buildPeopleDisplayNames", () => {
+  it("shows judges by first name, keeping Carrie Ann's compound first name together", () => {
+    const judges = [
+      { id: "1", name: "Carrie Ann Inaba" },
+      { id: "2", name: "Derek Hough" },
+      { id: "3", name: "Bruno Tonioli" },
+    ];
+    const names = buildPeopleDisplayNames(judges);
+    expect(names.get("1")).toBe("Carrie Ann");
+    expect(names.get("2")).toBe("Derek");
+    expect(names.get("3")).toBe("Bruno");
   });
 });

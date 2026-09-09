@@ -73,7 +73,7 @@ export default async function WaiversPage({
   const displayNames = buildCoupleDisplayNames(allCouples);
 
   const openSlots = (myRosterSlots ?? [])
-    .filter((s) => s.couples?.status === "eliminated")
+    .filter((s) => s.couples?.status === "eliminated" || s.couples?.status === "withdrawn")
     .map((s) => ({
       slotNumber: s.slot_number,
       formerCoupleName:

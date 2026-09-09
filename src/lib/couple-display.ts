@@ -3,9 +3,9 @@
 // same pool (celebrities vs. pros, checked separately) would otherwise be
 // indistinguishable.
 
-// Sarah Jane Nader (Season 35) has a compound first name — plain
-// whitespace-splitting would only catch "Sarah".
-const COMPOUND_FIRST_NAMES = ["Sarah Jane"];
+// Sarah Jane Nader (Season 35) and judge Carrie Ann Inaba both have compound
+// first names — plain whitespace-splitting would only catch "Sarah"/"Carrie".
+const COMPOUND_FIRST_NAMES = ["Sarah Jane", "Carrie Ann"];
 
 function firstName(fullName: string): string {
   const trimmed = fullName.trim();
@@ -40,6 +40,20 @@ function buildFirstNameMap(fullNames: string[]): Map<string, string> {
     const first = firstName(name);
     const key = collisionKey(first);
     result.set(name, (counts.get(key) ?? 0) > 1 ? `${first} ${lastInitial(name)}.` : first);
+  }
+  return result;
+}
+
+// For a flat list of people (e.g. judges) rather than couples — same
+// first-name-only, collision-disambiguated treatment, just without the
+// celebrity/pro pairing.
+export function buildPeopleDisplayNames<T extends { id: string; name: string }>(
+  people: T[]
+): Map<string, string> {
+  const nameMap = buildFirstNameMap(people.map((p) => p.name));
+  const result = new Map<string, string>();
+  for (const p of people) {
+    result.set(p.id, nameMap.get(p.name)!);
   }
   return result;
 }

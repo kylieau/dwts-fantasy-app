@@ -5,35 +5,99 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
-type DanceScore = { episode_id: string; couple_id: string; total_score: number };
+type Named = { id: string; name: string };
+type DanceScore = {
+  id: string;
+  episode_id: string;
+  couple_id: string;
+  dance_style_id: string;
+  total_score: number;
+};
+type JudgeScore = { dance_score_id: string; judge_id: string; score: number };
 type EpisodeResult = {
   episode_id: string;
   couple_id: string;
   outcome: string;
   was_bottom_two: boolean;
+  was_bottom_three: boolean;
   saved_by_judges: boolean;
+  was_team_dance: boolean;
 };
-type Episode = { id: string; week_number: number; airs_at: string; status: string; is_finale: boolean };
+type Episode = {
+  id: string;
+  week_number: number;
+  airs_at: string;
+  theme: string | null;
+  status: string;
+  is_finale: boolean;
+};
 
 export function AllResultsView({
   episodes,
   danceScores,
+  judgeScores,
   episodeResults,
   couples,
   coupleDisplayNames,
+  judges,
+  danceStyles,
 }: {
   episodes: Episode[];
   danceScores: DanceScore[];
+  judgeScores: JudgeScore[];
   episodeResults: EpisodeResult[];
   couples: Couple[];
   coupleDisplayNames: Record<string, string>;
+  judges: Named[];
+  danceStyles: Named[];
 }) {
   const [view, setView] = useState<"week" | "couple">("week");
 
-  const scoreTotalByEpisodeCouple = new Map<string, number>();
-  for (const s of danceScores) {
-    const key = `${s.episode_id}:${s.couple_id}`;
-    scoreTotalByEpisodeCouple.set(key, (scoreTotalByEpisodeCouple.get(key) ?? 0) + s.total_score);
+  const danceStyleById = new Map(danceStyles.map((d) => [d.id, d.name]));
+  const judgeById = new Map(judges.map((j) => [j.id, j.name]));
+
+  const judgeScoresByDance = new Map<string, JudgeScore[]>();
+  for (const js of judgeScores) {
+    const list = judgeScoresByDance.get(js.dance_score_id) ?? [];
+    list.push(js);
+    judgeScoresByDance.set(js.dance_score_id, list);
+  }
+
+  const danceScoresByEpisodeCouple = new Map<string, DanceScore[]>();
+  for (const ds of danceScores) {
+    const key = `${ds.episode_id}:${ds.couple_id}`;
+    const list = danceScoresByEpisodeCouple.get(key) ?? [];
+    list.push(ds);
+    danceScoresByEpisodeCouple.set(key, list);
+  }
+
+  function noteLabel(r: EpisodeResult) {
+    const notes: string[] = [];
+    if (r.was_bottom_two) notes.push("bottom 2");
+    if (r.was_bottom_three) notes.push("bottom 3");
+    if (r.saved_by_judges) notes.push("judges' save");
+    if (r.was_team_dance) notes.push("team dance");
+    return notes.join(", ");
+  }
+
+  function DanceBreakdown({ dance }: { dance: DanceScore }) {
+    const scores = judgeScoresByDance.get(dance.id) ?? [];
+    const values = scores.map((s) => s.score);
+    const spread = values.length > 1 ? Math.max(...values) - Math.min(...values) : 0;
+    return (
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 pl-4 text-xs text-muted-foreground">
+        <span>
+          {danceStyleById.get(dance.dance_style_id) ?? "Unknown dance"}: {dance.total_score}
+          {scores.length > 0 && (
+            <>
+              {" "}
+              ({scores.map((s) => `${judgeById.get(s.judge_id) ?? "?"}: ${s.score}`).join(", ")})
+            </>
+          )}
+        </span>
+        {spread > 0 && <span>spread: {spread}</span>}
+      </div>
+    );
   }
 
   const completedEpisodes = episodes
@@ -73,31 +137,39 @@ export function AllResultsView({
               .filter((r) => r.episode_id === ep.id)
               .map((r) => ({
                 ...r,
-                score: scoreTotalByEpisodeCouple.get(`${ep.id}:${r.couple_id}`) ?? 0,
+                dances: danceScoresByEpisodeCouple.get(`${ep.id}:${r.couple_id}`) ?? [],
+                total: (danceScoresByEpisodeCouple.get(`${ep.id}:${r.couple_id}`) ?? []).reduce(
+                  (sum, d) => sum + d.total_score,
+                  0
+                ),
               }))
-              .sort((a, b) => b.score - a.score);
+              .sort((a, b) => b.total - a.total);
 
             return (
               <Card key={ep.id}>
                 <CardHeader>
-                  <CardTitle>Week {ep.week_number}</CardTitle>
+                  <CardTitle>
+                    Week {ep.week_number}
+                    {ep.theme ? ` — ${ep.theme}` : ""}
+                  </CardTitle>
                   <CardDescription>
                     {new Date(ep.airs_at).toLocaleDateString()}
                     {ep.is_finale ? " · Finale" : ""}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-1">
+                <CardContent className="flex flex-col gap-2">
                   {results.map((r) => (
-                    <div
-                      key={r.couple_id}
-                      className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm"
-                    >
-                      <span>{coupleDisplayNames[r.couple_id] ?? "Unknown"}</span>
-                      <span className="text-muted-foreground">
-                        {r.score} pts · {r.outcome.replace("_", " ")}
-                        {r.was_bottom_two ? " · bottom 2" : ""}
-                        {r.saved_by_judges ? " · saved" : ""}
-                      </span>
+                    <div key={r.couple_id} className="flex flex-col gap-0.5">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
+                        <span>{coupleDisplayNames[r.couple_id] ?? "Unknown"}</span>
+                        <span className="text-muted-foreground">
+                          {r.total} pts · {r.outcome.replace("_", " ")}
+                          {noteLabel(r) ? ` · ${noteLabel(r)}` : ""}
+                        </span>
+                      </div>
+                      {r.dances.map((d) => (
+                        <DanceBreakdown key={d.id} dance={d} />
+                      ))}
                     </div>
                   ))}
                 </CardContent>
@@ -111,11 +183,15 @@ export function AllResultsView({
         couplesWithHistory.map((c) => {
           const history = episodeResults
             .filter((r) => r.couple_id === c.id)
-            .map((r) => ({
-              ...r,
-              episode: episodes.find((e) => e.id === r.episode_id),
-              score: scoreTotalByEpisodeCouple.get(`${r.episode_id}:${c.id}`) ?? 0,
-            }))
+            .map((r) => {
+              const dances = danceScoresByEpisodeCouple.get(`${r.episode_id}:${c.id}`) ?? [];
+              return {
+                ...r,
+                episode: episodes.find((e) => e.id === r.episode_id),
+                dances,
+                total: dances.reduce((sum, d) => sum + d.total_score, 0),
+              };
+            })
             .sort((a, b) => (a.episode?.week_number ?? 0) - (b.episode?.week_number ?? 0));
 
           return (
@@ -123,13 +199,22 @@ export function AllResultsView({
               <CardHeader>
                 <CardTitle>{coupleDisplayNames[c.id] ?? `${c.celebrity_name} & ${c.pro_name}`}</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col gap-1">
+              <CardContent className="flex flex-col gap-2">
                 {history.map((h, i) => (
-                  <div key={i} className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
-                    <span>Week {h.episode?.week_number}</span>
-                    <span className="text-muted-foreground">
-                      {h.score} pts · {h.outcome.replace("_", " ")}
-                    </span>
+                  <div key={i} className="flex flex-col gap-0.5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
+                      <span>
+                        Week {h.episode?.week_number}
+                        {h.episode?.theme ? ` — ${h.episode.theme}` : ""}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {h.total} pts · {h.outcome.replace("_", " ")}
+                        {noteLabel(h) ? ` · ${noteLabel(h)}` : ""}
+                      </span>
+                    </div>
+                    {h.dances.map((d) => (
+                      <DanceBreakdown key={d.id} dance={d} />
+                    ))}
                   </div>
                 ))}
               </CardContent>

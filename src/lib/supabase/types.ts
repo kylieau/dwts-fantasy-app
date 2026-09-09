@@ -70,28 +70,25 @@ export type Database = {
         Row: {
           couple_id: string
           created_at: string
-          dance_name: string | null
+          dance_style_id: string
           episode_id: string
           id: string
-          judge_breakdown: Json | null
           total_score: number
         }
         Insert: {
           couple_id: string
           created_at?: string
-          dance_name?: string | null
+          dance_style_id: string
           episode_id: string
           id?: string
-          judge_breakdown?: Json | null
           total_score: number
         }
         Update: {
           couple_id?: string
           created_at?: string
-          dance_name?: string | null
+          dance_style_id?: string
           episode_id?: string
           id?: string
-          judge_breakdown?: Json | null
           total_score?: number
         }
         Relationships: [
@@ -103,6 +100,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "dance_scores_dance_style_id_fkey"
+            columns: ["dance_style_id"]
+            isOneToOne: false
+            referencedRelation: "dance_styles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "dance_scores_episode_id_fkey"
             columns: ["episode_id"]
             isOneToOne: false
@@ -110,6 +114,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dance_styles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       draft_picks: {
         Row: {
@@ -170,7 +192,9 @@ export type Database = {
           id: string
           outcome: string
           saved_by_judges: boolean
+          was_bottom_three: boolean
           was_bottom_two: boolean
+          was_team_dance: boolean
         }
         Insert: {
           couple_id: string
@@ -178,7 +202,9 @@ export type Database = {
           id?: string
           outcome: string
           saved_by_judges?: boolean
+          was_bottom_three?: boolean
           was_bottom_two?: boolean
+          was_team_dance?: boolean
         }
         Update: {
           couple_id?: string
@@ -186,7 +212,9 @@ export type Database = {
           id?: string
           outcome?: string
           saved_by_judges?: boolean
+          was_bottom_three?: boolean
           was_bottom_two?: boolean
+          was_team_dance?: boolean
         }
         Relationships: [
           {
@@ -208,29 +236,35 @@ export type Database = {
       episodes: {
         Row: {
           airs_at: string
+          expected_dance_count: number
           id: string
           is_elimination_week: boolean
           is_finale: boolean
           season_id: string
           status: string
+          theme: string | null
           week_number: number
         }
         Insert: {
           airs_at: string
+          expected_dance_count?: number
           id?: string
           is_elimination_week?: boolean
           is_finale?: boolean
           season_id: string
           status?: string
+          theme?: string | null
           week_number: number
         }
         Update: {
           airs_at?: string
+          expected_dance_count?: number
           id?: string
           is_elimination_week?: boolean
           is_finale?: boolean
           season_id?: string
           status?: string
+          theme?: string | null
           week_number?: number
         }
         Relationships: [
@@ -239,6 +273,42 @@ export type Database = {
             columns: ["season_id"]
             isOneToOne: false
             referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      judge_scores: {
+        Row: {
+          dance_score_id: string
+          id: string
+          judge_id: string
+          score: number
+        }
+        Insert: {
+          dance_score_id: string
+          id?: string
+          judge_id: string
+          score: number
+        }
+        Update: {
+          dance_score_id?: string
+          id?: string
+          judge_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judge_scores_dance_score_id_fkey"
+            columns: ["dance_score_id"]
+            isOneToOne: false
+            referencedRelation: "dance_scores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_scores_judge_id_fkey"
+            columns: ["judge_id"]
+            isOneToOne: false
+            referencedRelation: "people"
             referencedColumns: ["id"]
           },
         ]

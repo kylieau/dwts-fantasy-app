@@ -120,6 +120,38 @@ describe("computeWeeklyScores", () => {
     expect(result[0].rosterPoints).toBe(30 + 10);
   });
 
+  it("a withdrawal earns no survival points and doesn't resolve an Eliminated prediction as correct", () => {
+    const result = computeWeeklyScores({
+      scoringSettings: settings,
+      rosterSlots: [{ managerId: "alice", coupleId: "couple-1" }],
+      danceScores: [],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "withdrawn" }],
+      predictions: [
+        { managerId: "bob", predictedEliminatedCoupleId: "couple-1", predictedTopScorerCoupleId: null },
+      ],
+      isFinale: false,
+    });
+
+    const alice = result.find((r) => r.managerId === "alice")!;
+    const bob = result.find((r) => r.managerId === "bob")!;
+
+    expect(alice.rosterPoints).toBe(0); // no dance, no survival bonus
+    expect(bob.predictionPoints).toBe(0); // withdrawal isn't a resolved "Eliminated" guess
+  });
+
+  it("a bye week earns no survival points but isn't a wrong Eliminated guess either", () => {
+    const result = computeWeeklyScores({
+      scoringSettings: settings,
+      rosterSlots: [{ managerId: "alice", coupleId: "couple-1" }],
+      danceScores: [],
+      episodeOutcomes: [{ coupleId: "couple-1", outcome: "bye" }],
+      predictions: [],
+      isFinale: false,
+    });
+
+    expect(result[0].rosterPoints).toBe(0);
+  });
+
   it("awards top-scorer prediction points independent of roster ownership", () => {
     const result = computeWeeklyScores({
       scoringSettings: settings,

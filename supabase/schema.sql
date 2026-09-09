@@ -116,14 +116,15 @@ create table scoring_settings (
 -- Couples (global for the active season)
 -- ============================================================
 
--- Pros return year after year with different partners; celebrities occasionally
--- do too (All-Stars-style seasons). Both are "people" with a role, not fields
--- baked into couples — so the same pro across multiple seasons is the same
--- row here, not free text repeated (and potentially misspelled) each time.
+-- Pros and judges return year after year (with different partners, for pros);
+-- celebrities occasionally do too (All-Stars-style seasons). All three are
+-- "people" with a role, not fields baked into couples/dance_scores — so the
+-- same pro/judge across multiple seasons is the same row here, not free text
+-- repeated (and potentially misspelled) each time.
 create table people (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  role text not null check (role in ('celebrity', 'pro')),
+  role text not null check (role in ('celebrity', 'pro', 'judge')),
   photo_url text,
   created_at timestamptz not null default now(),
   unique (name, role)
@@ -134,7 +135,12 @@ create table couples (
   season_id uuid not null references seasons(id),
   celebrity_id uuid not null references people(id),
   pro_id uuid not null references people(id),
-  status text not null default 'active' check (status in ('active', 'eliminated', 'winner', 'runner_up', 'third_place')),
+  -- withdrawn = left mid-season (e.g. injury), distinct from a real vote-off:
+  -- opens the roster slot the same as eliminated, but doesn't resolve an
+  -- "Eliminated" Pick 'Em prediction as correct and earns no survival points
+  -- that week (see computeWeeklyScores). "bye" (sat out, still competing)
+  -- never becomes a couples.status value at all — the couple stays 'active'.
+  status text not null default 'active' check (status in ('active', 'eliminated', 'withdrawn', 'winner', 'runner_up', 'third_place')),
   elimination_week int,
   created_at timestamptz not null default now(),
   unique (season_id, celebrity_id, pro_id)
@@ -195,32 +201,66 @@ create table episodes (
   season_id uuid not null references seasons(id),
   week_number int not null, -- resets to 1 each season, so unique per-season below, not globally
   airs_at timestamptz not null, -- actual real-world air date/time; set per episode, not assumed weekly-regular
+  theme text, -- e.g. "Villains Night" — free text, not a managed list; themes rarely repeat
+  expected_dance_count int not null default 1, -- informational only, doesn't gate how many dances a couple can actually submit
   is_elimination_week boolean not null default true,
   is_finale boolean not null default false,
   status text not null default 'upcoming' check (status in ('upcoming', 'locked', 'completed')),
   unique (season_id, week_number)
 );
 
--- One row per couple per dance, so multi-dance weeks (finals, team dances) just add rows.
+-- Admin-managed, extensible by the "add a dance style" admin form rather than
+-- a code change (unlike Status/Note, a new dance style is pure labeling with
+-- no scoring-logic implications, so there's nothing for it to be inconsistent
+-- with).
+create table dance_styles (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  created_at timestamptz not null default now()
+);
+
+-- One row per couple per dance, so multi-dance weeks (finals, team dances) just
+-- add rows. total_score is the sum of that dance's judge_scores rows, computed
+-- once at write time (in applyEpisodeResults) rather than re-derived on every
+-- read — the scoring engine only ever needs the aggregate, so this keeps
+-- computeWeeklyScores unchanged while judge_scores carries the detail.
 create table dance_scores (
   id uuid primary key default gen_random_uuid(),
   episode_id uuid not null references episodes(id) on delete cascade,
   couple_id uuid not null references couples(id),
-  dance_name text,
-  total_score numeric not null, -- e.g. 24 for 24/30
-  judge_breakdown jsonb, -- optional per-judge detail
+  dance_style_id uuid not null references dance_styles(id),
+  total_score numeric not null, -- e.g. 24 for 24/30 — sum of judge_scores
   created_at timestamptz not null default now()
 );
 
--- Per-couple outcome per episode. Supports double-elimination weeks and
--- judges'-save history (bottom_two flag set first, saved_by_judges set once resolved).
+-- Per-judge score for one dance_scores row, so "discrepancy across judges" is
+-- a normal query instead of parsing jsonb. A judge with no row for a given
+-- dance simply didn't score it that week (e.g. a guest judge who only judged
+-- one episode) — there's no "judge panel per episode" concept to maintain.
+create table judge_scores (
+  id uuid primary key default gen_random_uuid(),
+  dance_score_id uuid not null references dance_scores(id) on delete cascade,
+  judge_id uuid not null references people(id),
+  score numeric not null,
+  unique (dance_score_id, judge_id)
+);
+
+-- Per-couple outcome per episode. Supports double-elimination weeks (just
+-- insert two 'eliminated' rows that week — no special flag needed) and
+-- no-elimination weeks (insert zero 'eliminated' rows — see episodes.is_elimination_week
+-- for the episode-level version of this). was_bottom_two/was_bottom_three/
+-- saved_by_judges/was_team_dance are independent flags, not mutually exclusive
+-- with each other or with outcome — a couple can be Safe, in the Bottom 2, and
+-- saved by judges all in the same week.
 create table episode_results (
   id uuid primary key default gen_random_uuid(),
   episode_id uuid not null references episodes(id) on delete cascade,
   couple_id uuid not null references couples(id),
-  outcome text not null check (outcome in ('safe', 'eliminated', 'winner', 'runner_up', 'third_place')),
+  outcome text not null check (outcome in ('safe', 'eliminated', 'withdrawn', 'bye', 'winner', 'runner_up', 'third_place')),
   was_bottom_two boolean not null default false,
+  was_bottom_three boolean not null default false,
   saved_by_judges boolean not null default false,
+  was_team_dance boolean not null default false,
   unique (episode_id, couple_id)
 );
 
@@ -771,9 +811,19 @@ create policy "episodes are viewable by all authenticated users"
 on public.episodes for select
 using (true);
 
+grant select on public.dance_styles to authenticated;
+create policy "dance styles are viewable by all authenticated users"
+on public.dance_styles for select
+using (true);
+
 grant select on public.dance_scores to authenticated;
 create policy "dance scores are viewable by all authenticated users"
 on public.dance_scores for select
+using (true);
+
+grant select on public.judge_scores to authenticated;
+create policy "judge scores are viewable by all authenticated users"
+on public.judge_scores for select
 using (true);
 
 grant select on public.episode_results to authenticated;
@@ -984,7 +1034,7 @@ begin
       and rs.manager_id = auth.uid()
       and rs.slot_number = p_slot_number
       and rs.end_week is null
-      and c.status = 'eliminated'
+      and c.status in ('eliminated', 'withdrawn')
   ) then
     raise exception 'That slot is not open for a waiver claim';
   end if;

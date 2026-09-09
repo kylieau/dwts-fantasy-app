@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
 import { LeagueSwitcher } from "@/components/league-switcher";
+import { resultsEntryOpenToAll } from "@/lib/results";
 
 export async function SiteHeader() {
   const supabase = await createClient();
@@ -12,14 +13,14 @@ export async function SiteHeader() {
 
   let displayName: string | null = null;
   let leagues: { id: string; name: string }[] = [];
-  let isSuperAdmin = false;
+  let canEnterResults = false;
   if (user) {
     const [{ data: profile }, { data: memberships }] = await Promise.all([
       supabase.from("profiles").select("display_name, is_super_admin").eq("id", user.id).single(),
       supabase.from("league_members").select("leagues(id, name)").eq("user_id", user.id),
     ]);
     displayName = profile?.display_name ?? user.email ?? null;
-    isSuperAdmin = profile?.is_super_admin ?? false;
+    canEnterResults = (profile?.is_super_admin ?? false) || resultsEntryOpenToAll();
     leagues = memberships?.map((m) => m.leagues!).filter(Boolean) ?? [];
   }
 
@@ -35,7 +36,7 @@ export async function SiteHeader() {
             <Button render={<Link href="/leagues" />} variant="ghost" size="sm">
               Leagues
             </Button>
-            {isSuperAdmin && (
+            {canEnterResults && (
               <Button render={<Link href="/admin/results" />} variant="ghost" size="sm">
                 Admin
               </Button>

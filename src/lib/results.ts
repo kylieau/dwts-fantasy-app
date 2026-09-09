@@ -1,20 +1,29 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { computeWeeklyScores } from "@/lib/scoring";
+import { computeWeeklyScores, type Outcome } from "@/lib/scoring";
 
-type Outcome = "safe" | "eliminated" | "winner" | "runner_up" | "third_place";
+export type JudgeScoreSubmission = { judgeId: string; score: number };
+
+export type DanceSubmission = {
+  danceStyleId: string;
+  judgeScores: JudgeScoreSubmission[];
+};
 
 export type EntrySubmission = {
   coupleId: string;
-  danceScores: number[];
+  dances: DanceSubmission[];
   outcome: Outcome;
   wasBottomTwo: boolean;
+  wasBottomThree: boolean;
   savedByJudges: boolean;
+  wasTeamDance: boolean;
 };
 
 export type EpisodeResultsInput = {
   weekNumber: number;
   airsAt: string;
+  theme: string | null;
+  expectedDanceCount: number;
   isEliminationWeek: boolean;
   isFinale: boolean;
   entries: EntrySubmission[];
@@ -50,6 +59,8 @@ export async function applyEpisodeResults(
         season_id: season.id,
         week_number: input.weekNumber,
         airs_at: input.airsAt,
+        theme: input.theme,
+        expected_dance_count: input.expectedDanceCount,
         is_elimination_week: input.isEliminationWeek,
         is_finale: input.isFinale,
         // Submitting with no couple entries just schedules the episode (sets
@@ -65,19 +76,42 @@ export async function applyEpisodeResults(
 
   if (episodeErr) return { error: episodeErr.message };
 
+  // judge_scores cascades from dance_scores, so clearing dance_scores is enough.
   await admin.from("dance_scores").delete().eq("episode_id", episode.id);
   await admin.from("episode_results").delete().eq("episode_id", episode.id);
 
-  const danceScoreRows = input.entries.flatMap((e) =>
-    e.danceScores.map((score) => ({
-      episode_id: episode.id,
-      couple_id: e.coupleId,
-      total_score: score,
-    }))
-  );
-  if (danceScoreRows.length > 0) {
-    const { error } = await admin.from("dance_scores").insert(danceScoreRows);
-    if (error) return { error: error.message };
+  // Inserted one dance at a time (not a bulk insert) so each dance_scores row's
+  // real id is known before inserting its judge_scores — no reliance on
+  // multi-row insert order lining up with the input array.
+  const danceScoreInputs: { coupleId: string; totalScore: number }[] = [];
+  for (const e of input.entries) {
+    for (const dance of e.dances) {
+      const totalScore = dance.judgeScores.reduce((sum, js) => sum + js.score, 0);
+      const { data: danceScoreRow, error: danceErr } = await admin
+        .from("dance_scores")
+        .insert({
+          episode_id: episode.id,
+          couple_id: e.coupleId,
+          dance_style_id: dance.danceStyleId,
+          total_score: totalScore,
+        })
+        .select()
+        .single();
+      if (danceErr) return { error: danceErr.message };
+
+      if (dance.judgeScores.length > 0) {
+        const { error: judgeErr } = await admin.from("judge_scores").insert(
+          dance.judgeScores.map((js) => ({
+            dance_score_id: danceScoreRow.id,
+            judge_id: js.judgeId,
+            score: js.score,
+          }))
+        );
+        if (judgeErr) return { error: judgeErr.message };
+      }
+
+      danceScoreInputs.push({ coupleId: e.coupleId, totalScore });
+    }
   }
 
   const outcomeRows = input.entries.map((e) => ({
@@ -85,7 +119,9 @@ export async function applyEpisodeResults(
     couple_id: e.coupleId,
     outcome: e.outcome,
     was_bottom_two: e.wasBottomTwo,
+    was_bottom_three: e.wasBottomThree,
     saved_by_judges: e.savedByJudges,
+    was_team_dance: e.wasTeamDance,
   }));
   if (outcomeRows.length > 0) {
     const { error } = await admin.from("episode_results").insert(outcomeRows);
@@ -93,13 +129,18 @@ export async function applyEpisodeResults(
   }
 
   for (const e of input.entries) {
-    if (e.outcome !== "safe") {
+    // eliminated/withdrawn open the roster slot for waivers; winner/runner_up/
+    // third_place record the finale placement. safe and bye leave
+    // couples.status untouched — a bye couple is still actively competing.
+    if (e.outcome === "eliminated" || e.outcome === "withdrawn") {
       await admin
         .from("couples")
-        .update({
-          status: e.outcome,
-          elimination_week: e.outcome === "eliminated" ? input.weekNumber : null,
-        })
+        .update({ status: e.outcome, elimination_week: input.weekNumber })
+        .eq("id", e.coupleId);
+    } else if (e.outcome === "winner" || e.outcome === "runner_up" || e.outcome === "third_place") {
+      await admin
+        .from("couples")
+        .update({ status: e.outcome, elimination_week: null })
         .eq("id", e.coupleId);
     }
   }
@@ -107,10 +148,6 @@ export async function applyEpisodeResults(
   const { data: leagues, error: leaguesErr } = await admin.from("leagues").select("id");
   if (leaguesErr) return { error: leaguesErr.message };
 
-  const danceScoreInputs = danceScoreRows.map((r) => ({
-    coupleId: r.couple_id,
-    totalScore: r.total_score,
-  }));
   const episodeOutcomeInputs = outcomeRows.map((r) => ({
     coupleId: r.couple_id,
     outcome: r.outcome,
@@ -147,7 +184,7 @@ export async function applyEpisodeResults(
       rosterSlots: rosterSlots
         .filter((r): r is { manager_id: string; couple_id: string } => r.couple_id !== null)
         .map((r) => ({ managerId: r.manager_id, coupleId: r.couple_id })),
-      danceScores: danceScoreInputs,
+      danceScores: danceScoreInputs.map((d) => ({ coupleId: d.coupleId, totalScore: d.totalScore })),
       episodeOutcomes: episodeOutcomeInputs,
       predictions: (predictions ?? []).map((p) => ({
         managerId: p.manager_id,

@@ -12,9 +12,18 @@ export type RosterSlot = { managerId: string; coupleId: string };
 
 export type DanceScore = { coupleId: string; totalScore: number };
 
+export type Outcome =
+  | "safe"
+  | "eliminated"
+  | "withdrawn"
+  | "bye"
+  | "winner"
+  | "runner_up"
+  | "third_place";
+
 export type EpisodeOutcome = {
   coupleId: string;
-  outcome: "safe" | "eliminated" | "winner" | "runner_up" | "third_place";
+  outcome: Outcome;
 };
 
 export type Prediction = {
@@ -35,6 +44,15 @@ const PODIUM_POINTS_KEY: Record<string, keyof ScoringSettings> = {
   runner_up: "secondPlacePoints",
   third_place: "thirdPlacePoints",
 };
+
+// Anything else (safe, winner, runner_up, third_place) earns survival points.
+// eliminated: voted off. withdrawn: left mid-season (injury etc.) — didn't
+// complete the week, but it's nobody's fault, so just no bonus rather than
+// treating it like a vote-off. bye: sat out but still competing overall —
+// also no bonus for a week they didn't dance, but see NO_SURVIVAL_OUTCOMES
+// vs. the couples.status sync in applyEpisodeResults, where bye is different
+// again (doesn't open the roster slot, unlike eliminated/withdrawn).
+const NO_SURVIVAL_OUTCOMES = new Set<Outcome>(["eliminated", "withdrawn", "bye"]);
 
 // Pure and DB-free by design: the caller is responsible for fetching
 // already-week-scoped data (e.g. only roster_slots active this week) — this
@@ -78,7 +96,7 @@ export function computeWeeklyScores({
     let points = (coupleTotalScore.get(coupleId) ?? 0) * scoringSettings.judgesScoreMultiplier;
 
     const outcome = outcomeByCouple.get(coupleId);
-    if (outcome && outcome !== "eliminated") {
+    if (outcome && !NO_SURVIVAL_OUTCOMES.has(outcome)) {
       points += scoringSettings.survivalPoints;
     }
 

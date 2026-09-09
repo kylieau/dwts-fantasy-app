@@ -1,12 +1,11 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { applyEpisodeResults, type EpisodeResultsInput } from "@/lib/results";
+import { applyEpisodeResults, resultsEntryOpenToAll, type EpisodeResultsInput } from "@/lib/results";
 
-export async function submitEpisodeResults(
-  input: EpisodeResultsInput
-): Promise<{ error: string | null }> {
+async function requireResultsAccess(): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,7 +18,45 @@ export async function submitEpisodeResults(
     .eq("id", user.id)
     .single();
 
-  if (!profile?.is_super_admin) return { error: "Not authorized" };
+  if (!profile?.is_super_admin && !resultsEntryOpenToAll()) return { error: "Not authorized" };
+  return { error: null };
+}
+
+export async function submitEpisodeResults(
+  input: EpisodeResultsInput
+): Promise<{ error: string | null }> {
+  const access = await requireResultsAccess();
+  if (access.error) return access;
 
   return applyEpisodeResults(createAdminClient(), input);
+}
+
+export async function addJudge(name: string): Promise<{ error: string | null }> {
+  const access = await requireResultsAccess();
+  if (access.error) return access;
+
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Judge name is required" };
+
+  const { error } = await createAdminClient()
+    .from("people")
+    .insert({ name: trimmed, role: "judge" });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/results");
+  return { error: null };
+}
+
+export async function addDanceStyle(name: string): Promise<{ error: string | null }> {
+  const access = await requireResultsAccess();
+  if (access.error) return access;
+
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Dance style name is required" };
+
+  const { error } = await createAdminClient().from("dance_styles").insert({ name: trimmed });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/results");
+  return { error: null };
 }
