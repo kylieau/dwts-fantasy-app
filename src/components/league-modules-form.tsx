@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBrowserTimeZone, airsAtToUtcIso, utcIsoToLocalInput, formatDeadline } from "@/lib/use-browser-time-zone";
+import { explainGrandFinaleMethod } from "@/lib/grand-finale-explainer";
 
 type ScoringMethod = "exact_position" | "distance_based" | "binary_tier";
 type WaiverMode = "locked" | "waivers";
@@ -339,6 +340,9 @@ export function LeagueModulesForm({
               {bonusMethod === "binary_tier" && (
                 <SettingRow label="Tier size" value={`Top ${bonusTierSize}`} />
               )}
+              <p className="pt-2 text-sm text-muted-foreground">
+                {explainGrandFinaleMethod(bonusMethod, bonusDistancePenalty, bonusTierSize, bonusPicksPointsPerCorrect)}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -686,6 +690,9 @@ export function LeagueModulesForm({
                 </div>
               )}
             </div>
+            <p className="text-sm text-muted-foreground">
+              {explainGrandFinaleMethod(bonusMethod, bonusDistancePenalty, bonusTierSize, bonusPicksPointsPerCorrect)}
+            </p>
           </CardContent>
         </Card>
       )}

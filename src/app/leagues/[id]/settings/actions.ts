@@ -28,7 +28,7 @@ export async function updateLeagueSettings(
 
   if (error) return { error: error.message };
 
-  revalidatePath(`/leagues/${leagueId}/settings`);
+  revalidatePath(`/leagues/${leagueId}`);
   return { error: null };
 }
 
@@ -85,6 +85,6 @@ export async function updateScoringCategories(
 
   if (error) return { error: error.message };
 
-  revalidatePath(`/leagues/${leagueId}/settings`);
+  revalidatePath(`/leagues/${leagueId}`);
   return { error: null };
 }

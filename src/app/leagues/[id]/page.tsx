@@ -13,6 +13,9 @@ import { StandingsTable } from "@/components/standings-table";
 import { RosterCard } from "@/components/roster-card";
 import { PickEmBox } from "@/components/pick-em-box";
 import { GrandFinaleBox } from "@/components/grand-finale-box";
+import { HomeDashboard } from "@/components/home-dashboard";
+import { LeagueSettingsSheet } from "@/components/league-settings-sheet";
+import { LeagueTabs } from "@/components/league-tabs";
 import { buildCoupleDisplayNames, formatCoupleName } from "@/lib/couple-display";
 
 export default async function LeaguePage({
@@ -20,10 +23,10 @@ export default async function LeaguePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; openSettings?: string }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, message, openSettings } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -34,11 +37,7 @@ export default async function LeaguePage({
     redirect("/login");
   }
 
-  const { data: league } = await supabase
-    .from("leagues")
-    .select("id, name, invite_code, commissioner_id, waiver_mode")
-    .eq("id", id)
-    .single();
+  const { data: league } = await supabase.from("leagues").select("*").eq("id", id).single();
 
   if (!league) {
     notFound();
@@ -46,20 +45,18 @@ export default async function LeaguePage({
 
   const { data: scoringSettings } = await supabase
     .from("scoring_settings")
-    .select(
-      "scoring_configured, judges_score_category_enabled, eliminations_category_enabled, bonus_picks_category_enabled, bonus_picks_deadline"
-    )
+    .select("*")
     .eq("league_id", id)
     .single();
 
-  if (league.commissioner_id === user.id) {
-    if (scoringSettings && !scoringSettings.scoring_configured) {
-      redirect(
-        `/leagues/${id}/settings?message=${encodeURIComponent(
-          "Review and save Modules to finish setting up your league"
-        )}`
-      );
-    }
+  const isCommissioner = league.commissioner_id === user.id;
+
+  if (isCommissioner && scoringSettings && !scoringSettings.scoring_configured) {
+    redirect(
+      `/leagues/${id}?openSettings=1&message=${encodeURIComponent(
+        "Review and save Modules to finish setting up your league"
+      )}`
+    );
   }
 
   const danceCardOn = scoringSettings?.judges_score_category_enabled ?? true;
@@ -75,7 +72,10 @@ export default async function LeaguePage({
         .select("user_id, role, joined_at, profiles(display_name)")
         .eq("league_id", id)
         .order("joined_at"),
-      supabase.from("weekly_manager_scores").select("manager_id, total_points").eq("league_id", id),
+      supabase
+        .from("weekly_manager_scores")
+        .select("manager_id, roster_points, prediction_points, grand_finale_points, total_points")
+        .eq("league_id", id),
       supabase
         .from("roster_slots")
         .select(
@@ -98,10 +98,28 @@ export default async function LeaguePage({
     ]);
 
   const { data: activeSeasonId } = await supabase.rpc("active_season_id");
+  const { data: premiereEpisode } = await supabase
+    .from("episodes")
+    .select("airs_at")
+    .eq("season_id", activeSeasonId ?? "")
+    .eq("week_number", 1)
+    .maybeSingle();
 
   const pointsByManager = new Map<string, number>();
+  const rosterPointsByManager = new Map<string, number>();
+  const predictionPointsByManager = new Map<string, number>();
+  const grandFinalePointsByManager = new Map<string, number>();
   for (const row of allScores ?? []) {
     pointsByManager.set(row.manager_id, (pointsByManager.get(row.manager_id) ?? 0) + row.total_points);
+    rosterPointsByManager.set(row.manager_id, (rosterPointsByManager.get(row.manager_id) ?? 0) + row.roster_points);
+    predictionPointsByManager.set(
+      row.manager_id,
+      (predictionPointsByManager.get(row.manager_id) ?? 0) + row.prediction_points
+    );
+    grandFinalePointsByManager.set(
+      row.manager_id,
+      (grandFinalePointsByManager.get(row.manager_id) ?? 0) + row.grand_finale_points
+    );
   }
 
   const standings = (members ?? []).map((m) => ({
@@ -109,6 +127,11 @@ export default async function LeaguePage({
     displayName: m.profiles?.display_name ?? "Unknown",
     totalPoints: pointsByManager.get(m.user_id) ?? 0,
   }));
+
+  const rank = Math.max(
+    1,
+    [...standings].sort((a, b) => b.totalPoints - a.totalPoints).findIndex((s) => s.managerId === user.id) + 1
+  );
 
   const flatCouples = (allCouples ?? []).map((c) => ({
     id: c.id,
@@ -190,8 +213,55 @@ export default async function LeaguePage({
       : null;
   }
 
+  const picksNeeded =
+    (curtainCallOn && !!upcomingEpisode && !isLocked && !ownPrediction) ||
+    (grandFinaleOn && !grandFinaleLocked && !grandFinaleOrder);
+
+  const deadlineCandidates: { label: string; iso: string }[] = [];
+  if (curtainCallOn && lockAt && new Date(lockAt) > new Date()) {
+    deadlineCandidates.push({ label: "Curtain Call", iso: lockAt });
+  }
+  if (grandFinaleOn && grandFinaleDeadline && new Date(grandFinaleDeadline) > new Date()) {
+    deadlineCandidates.push({ label: "Grand Finale", iso: grandFinaleDeadline });
+  }
+  deadlineCandidates.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
+  const nextDeadline = deadlineCandidates[0] ?? null;
+
+  const categoryBreakdown = (
+    [
+      danceCardOn && {
+        label: "Dance Card",
+        points: Math.round(
+          (rosterPointsByManager.get(user.id) ?? 0) * (scoringSettings?.judges_score_category_weight ?? 1)
+        ),
+      },
+      curtainCallOn && {
+        label: "Curtain Call",
+        points: Math.round(
+          (predictionPointsByManager.get(user.id) ?? 0) * (scoringSettings?.eliminations_category_weight ?? 1)
+        ),
+      },
+      grandFinaleOn && {
+        label: "Grand Finale",
+        points: Math.round(
+          (grandFinalePointsByManager.get(user.id) ?? 0) * (scoringSettings?.bonus_picks_category_weight ?? 1)
+        ),
+      },
+    ] as const
+  ).filter((c): c is { label: string; points: number } => !!c);
+
+  const rosterCouples = (rosterSlots ?? [])
+    .filter((r) => r.couples)
+    .map((r) => ({
+      ...(allDisplayNames.get(r.couple_id!) ?? {
+        celebrity: r.couples!.celebrity?.name ?? "Unknown",
+        pro: r.couples!.pro?.name ?? "Unknown",
+      }),
+      status: r.couples!.status,
+    }));
+
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-12">
+    <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{league.name}</h1>
@@ -202,6 +272,7 @@ export default async function LeaguePage({
             </span>
           </p>
           {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+          {message && <p className="mt-2 text-sm text-muted-foreground">{message}</p>}
         </div>
         <div className="flex gap-2">
           {danceCardOn && (
@@ -214,69 +285,110 @@ export default async function LeaguePage({
               Waivers
             </Button>
           )}
-          {league.commissioner_id === user.id && (
-            <Button render={<Link href={`/leagues/${id}/settings`} />} variant="outline" size="sm">
-              Settings
-            </Button>
-          )}
+          <LeagueSettingsSheet
+            leagueId={id}
+            league={league}
+            scoringSettings={scoringSettings}
+            canEdit={isCommissioner}
+            premiereAirsAt={premiereEpisode?.airs_at ?? null}
+            defaultOpen={openSettings === "1"}
+          />
         </div>
       </div>
 
-      {curtainCallOn && (
-        <PickEmBox
-          leagueId={id}
-          episode={upcomingEpisode ?? null}
-          lockAt={lockAt}
-          activeCouples={activeCouples}
-          coupleDisplayNames={Object.fromEntries(activeDisplayNames)}
-          existingPrediction={ownPrediction}
-          isLocked={isLocked}
-          revealedPredictions={revealedPredictions}
-        />
-      )}
-
-      {grandFinaleOn && (
-        <GrandFinaleBox
-          leagueId={id}
-          couples={seasonCouples}
-          coupleDisplayNames={Object.fromEntries(allDisplayNames)}
-          existingOrder={grandFinaleOrder}
-          deadline={grandFinaleDeadline}
-          isLocked={grandFinaleLocked}
-        />
-      )}
-
-      <StandingsTable standings={standings} />
-
-      {danceCardOn && rosterSlots && rosterSlots.length > 0 && (
-        <RosterCard
-          couples={rosterSlots
-            .filter((r) => r.couples)
-            .map((r) => ({
-              ...(allDisplayNames.get(r.couple_id!) ?? {
-                celebrity: r.couples!.celebrity?.name ?? "Unknown",
-                pro: r.couples!.pro?.name ?? "Unknown",
-              }),
-              status: r.couples!.status,
-            }))}
-          totalPoints={pointsByManager.get(user.id) ?? 0}
-        />
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Members</CardTitle>
-          <CardDescription>{members?.length ?? 0} joined</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {members?.map((m, i) => (
-            <div key={i} className="flex items-center justify-between text-sm">
-              <span>{m.profiles?.display_name}</span>
-              <span className="capitalize text-muted-foreground">{m.role}</span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <LeagueTabs
+        home={
+          <HomeDashboard
+            rank={rank}
+            totalMembers={standings.length}
+            picksNeeded={picksNeeded}
+            categoryBreakdown={categoryBreakdown}
+            nextDeadline={nextDeadline}
+          />
+        }
+        pickEm={
+          <div className="flex flex-col gap-6">
+            {curtainCallOn && (
+              <PickEmBox
+                leagueId={id}
+                episode={upcomingEpisode ?? null}
+                lockAt={lockAt}
+                activeCouples={activeCouples}
+                coupleDisplayNames={Object.fromEntries(activeDisplayNames)}
+                existingPrediction={ownPrediction}
+                isLocked={isLocked}
+                revealedPredictions={revealedPredictions}
+              />
+            )}
+            {grandFinaleOn && (
+              <GrandFinaleBox
+                leagueId={id}
+                couples={seasonCouples}
+                coupleDisplayNames={Object.fromEntries(allDisplayNames)}
+                existingOrder={grandFinaleOrder}
+                deadline={grandFinaleDeadline}
+                isLocked={grandFinaleLocked}
+              />
+            )}
+            {!curtainCallOn && !grandFinaleOn && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pick &apos;Em</CardTitle>
+                  <CardDescription>Neither Curtain Call nor Grand Finale is on for this league.</CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+          </div>
+        }
+        roster={
+          danceCardOn ? (
+            rosterCouples.length > 0 ? (
+              <RosterCard couples={rosterCouples} totalPoints={pointsByManager.get(user.id) ?? 0} />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Roster</CardTitle>
+                  <CardDescription>No roster yet — check the draft room.</CardDescription>
+                </CardHeader>
+              </Card>
+            )
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Roster</CardTitle>
+                <CardDescription>Dance Card isn&apos;t enabled for this league.</CardDescription>
+              </CardHeader>
+            </Card>
+          )
+        }
+        results={
+          <Card>
+            <CardHeader>
+              <CardTitle>Weekly Results</CardTitle>
+              <CardDescription>Coming soon.</CardDescription>
+            </CardHeader>
+          </Card>
+        }
+        standings={
+          <div className="flex flex-col gap-6">
+            <StandingsTable standings={standings} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Members</CardTitle>
+                <CardDescription>{members?.length ?? 0} joined</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                {members?.map((m, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span>{m.profiles?.display_name}</span>
+                    <span className="capitalize text-muted-foreground">{m.role}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        }
+      />
     </div>
   );
 }

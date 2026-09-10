@@ -17,8 +17,8 @@ export async function createLeague(formData: FormData) {
 
   revalidatePath("/leagues", "layout");
   redirect(
-    `/leagues/${data.id}/settings?message=${encodeURIComponent(
-      "Review and save Scoring Categories to finish setting up your league"
+    `/leagues/${data.id}?openSettings=1&message=${encodeURIComponent(
+      "Review and save Modules to finish setting up your league"
     )}`
   );
 }
