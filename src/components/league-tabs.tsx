@@ -34,6 +34,13 @@ export function LeagueTabs({
   function handleValueChange(value: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", value);
+    // The "League created!" banner is a one-time toast tied to the first
+    // Home visit — leaving Home counts as acknowledging it, so drop it from
+    // the URL here rather than tracking dismissal separately. Once it's
+    // gone from the params, nothing re-adds it, so it can't resurface.
+    if (value !== "home") {
+      params.delete("justCreated");
+    }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
