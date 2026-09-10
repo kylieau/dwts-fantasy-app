@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ResultsForm } from "@/components/results-form";
 import { AllResultsView } from "@/components/all-results-view";
 import { ScheduleManager } from "@/components/schedule-manager";
 import { JudgesDanceStylesManager } from "@/components/judges-dance-styles-manager";
 import type { CoupleNameParts } from "@/lib/couple-display";
+import { PlusCircleIcon, ListChecksIcon, CalendarIcon, SettingsIcon } from "lucide-react";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string };
 type Named = { id: string; name: string };
@@ -40,6 +41,13 @@ type Episode = {
   is_elimination_week: boolean;
 };
 
+const TABS = [
+  { value: "enter", label: "Enter Results", icon: PlusCircleIcon },
+  { value: "view", label: "View Results", icon: ListChecksIcon },
+  { value: "schedule", label: "Schedule", icon: CalendarIcon },
+  { value: "manage", label: "Settings", icon: SettingsIcon },
+] as const;
+
 export function AdminResultsTabs({
   activeCouples,
   allCouples,
@@ -63,67 +71,56 @@ export function AdminResultsTabs({
   judgeScores: JudgeScore[];
   episodeResults: EpisodeResult[];
 }) {
-  const [tab, setTab] = useState<"enter" | "view" | "schedule" | "manage">("enter");
+  const [tab, setTab] = useState<(typeof TABS)[number]["value"]>("enter");
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-12">
-      <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
-      <div className="flex gap-2 border-b border-border pb-2">
-        <Button
-          size="sm"
-          variant={tab === "enter" ? "default" : "ghost"}
-          onClick={() => setTab("enter")}
-        >
-          Enter New Results
-        </Button>
-        <Button
-          size="sm"
-          variant={tab === "view" ? "default" : "ghost"}
-          onClick={() => setTab("view")}
-        >
-          View All Results
-        </Button>
-        <Button
-          size="sm"
-          variant={tab === "schedule" ? "default" : "ghost"}
-          onClick={() => setTab("schedule")}
-        >
-          Set Schedule
-        </Button>
-        <Button
-          size="sm"
-          variant={tab === "manage" ? "default" : "ghost"}
-          onClick={() => setTab("manage")}
-        >
-          Additional Settings
-        </Button>
+    <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] sm:static sm:border-t-0 sm:border-b sm:pb-0">
+        <TabsList className="mx-auto h-auto w-full max-w-3xl justify-around rounded-none bg-transparent p-1 sm:w-fit sm:justify-start sm:gap-1">
+          {TABS.map(({ value, label, icon: Icon }) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="h-auto flex-col gap-0.5 rounded-md px-2 py-1.5 sm:flex-row sm:gap-1.5 sm:px-3"
+            >
+              <Icon className="size-5 sm:size-4" />
+              <span className="text-[10px] sm:text-sm">{label}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
       </div>
 
-      {tab === "enter" && (
-        <ResultsForm
-          couples={activeCouples}
-          coupleDisplayNames={activeCoupleDisplayNames}
-          judges={judges}
-          danceStyles={danceStyles}
-          episodes={episodes}
-        />
-      )}
-      {tab === "view" && (
-        <AllResultsView
-          episodes={episodes}
-          danceScores={danceScores}
-          judgeScores={judgeScores}
-          episodeResults={episodeResults}
-          couples={allCouples}
-          coupleDisplayNames={allCoupleDisplayNames}
-          judges={judges}
-          danceStyles={danceStyles}
-        />
-      )}
-      {tab === "schedule" && <ScheduleManager episodes={episodes} />}
-      {tab === "manage" && (
-        <JudgesDanceStylesManager judges={judges} danceStyles={danceStyles} />
-      )}
-    </div>
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-12 pb-20 sm:pb-12">
+        <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
+
+        <TabsContent value="enter">
+          <ResultsForm
+            couples={activeCouples}
+            coupleDisplayNames={activeCoupleDisplayNames}
+            judges={judges}
+            danceStyles={danceStyles}
+            episodes={episodes}
+          />
+        </TabsContent>
+        <TabsContent value="view">
+          <AllResultsView
+            episodes={episodes}
+            danceScores={danceScores}
+            judgeScores={judgeScores}
+            episodeResults={episodeResults}
+            couples={allCouples}
+            coupleDisplayNames={allCoupleDisplayNames}
+            judges={judges}
+            danceStyles={danceStyles}
+          />
+        </TabsContent>
+        <TabsContent value="schedule">
+          <ScheduleManager episodes={episodes} />
+        </TabsContent>
+        <TabsContent value="manage">
+          <JudgesDanceStylesManager judges={judges} danceStyles={danceStyles} />
+        </TabsContent>
+      </div>
+    </Tabs>
   );
 }
