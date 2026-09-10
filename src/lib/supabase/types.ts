@@ -560,6 +560,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          deletion_requested_at: string | null
           display_name: string
           id: string
           is_super_admin: boolean
@@ -567,6 +568,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          deletion_requested_at?: string | null
           display_name: string
           id: string
           is_super_admin?: boolean
@@ -574,6 +576,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          deletion_requested_at?: string | null
           display_name?: string
           id?: string
           is_super_admin?: boolean
@@ -882,6 +885,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_account_deletion: { Args: never; Returns: undefined }
       create_league: {
         Args: { p_name: string }
         Returns: {
@@ -1028,6 +1032,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      request_account_deletion: { Args: never; Returns: undefined }
       set_draft_order: {
         Args: { p_league_id: string; p_ordered_user_ids: string[] }
         Returns: undefined

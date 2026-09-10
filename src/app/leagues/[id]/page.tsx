@@ -17,6 +17,7 @@ import { LeagueHeader } from "@/components/league-header";
 import { LeagueTabs } from "@/components/league-tabs";
 import { WeeklyResultsView } from "@/components/weekly-results-view";
 import { buildCoupleDisplayNames, formatCoupleName } from "@/lib/couple-display";
+import { getStandingMessage } from "@/lib/standings-message";
 
 export default async function LeaguePage({
   params,
@@ -164,6 +165,22 @@ export default async function LeaguePage({
     1,
     [...standings].sort((a, b) => b.totalPoints - a.totalPoints).findIndex((s) => s.managerId === user.id) + 1
   );
+
+  const userPoints = pointsByManager.get(user.id) ?? 0;
+  const pointTotals = standings.map((s) => s.totalPoints);
+  const maxPoints = Math.max(...pointTotals);
+  const minPoints = Math.min(...pointTotals);
+  const isTiedForFirst = userPoints === maxPoints && pointTotals.filter((p) => p === maxPoints).length > 1;
+  const isTiedForLast =
+    !isTiedForFirst && userPoints === minPoints && pointTotals.filter((p) => p === minPoints).length > 1;
+
+  const standingMessage = getStandingMessage({
+    rank,
+    totalMembers: standings.length,
+    isTiedForFirst,
+    isTiedForLast,
+    seed: `${user.id}-${completedEpisodes?.[0]?.week_number ?? 0}`,
+  });
 
   const flatCouples = (allCouples ?? []).map((c) => ({
     id: c.id,
@@ -317,8 +334,7 @@ export default async function LeaguePage({
       <LeagueTabs
         home={
           <HomeDashboard
-            rank={rank}
-            totalMembers={standings.length}
+            standingMessage={standingMessage}
             picksNeeded={picksNeeded}
             categoryBreakdown={categoryBreakdown}
             nextDeadline={nextDeadline}

@@ -7,9 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRightIcon } from "lucide-react";
 
-const PLACEHOLDER_ROWS = ["Profile", "Notifications", "Appearance", "Account & data"];
+const LINKED_ROWS = [
+  { label: "Profile", href: "/settings/profile" },
+  { label: "Notifications", href: "/notifications" },
+  { label: "Account & data", href: "/settings/account" },
+];
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; message?: string }>;
+}) {
+  const { error, message } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -34,19 +43,26 @@ export default async function SettingsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
           <p className="mt-1 text-sm text-muted-foreground">Account-wide</p>
+          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+          {message && <p className="mt-2 text-sm text-muted-foreground">{message}</p>}
         </div>
 
         <Card>
           <CardContent className="flex flex-col p-0">
-            {PLACEHOLDER_ROWS.map((label) => (
-              <div
-                key={label}
-                className="flex items-center justify-between border-b border-border px-4 py-3 text-sm text-muted-foreground last:border-b-0"
+            {LINKED_ROWS.map((row) => (
+              <Link
+                key={row.href}
+                href={row.href}
+                className="flex items-center justify-between border-b border-border px-4 py-3 text-sm transition-colors last:border-b-0 hover:bg-muted"
               >
-                <span>{label}</span>
-                <span className="text-xs">Coming soon</span>
-              </div>
+                <span>{row.label}</span>
+                <ChevronRightIcon className="size-4 text-muted-foreground" />
+              </Link>
             ))}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3 text-sm text-muted-foreground last:border-b-0">
+              <span>Appearance</span>
+              <span className="text-xs">Coming soon</span>
+            </div>
           </CardContent>
         </Card>
 

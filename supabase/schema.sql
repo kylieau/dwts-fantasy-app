@@ -22,7 +22,15 @@ create table profiles (
   display_name text not null,
   avatar_url text,
   is_super_admin boolean not null default false, -- global results-entry admin
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Account deletion is request-and-review, not instant: a manager's
+  -- historical roster_slots/predictions/weekly_manager_scores rows are
+  -- deliberately not cleaned up when they leave a league (see leave_league),
+  -- since they're woven into other members' shared league history — so there's
+  -- no safe automatic cascade to actually erase auth.users/profiles today.
+  -- This column is just the in-app "yes, I asked to be deleted" record Apple's
+  -- App Store review requires (5.1.1(v)); an operator processes it by hand.
+  deletion_requested_at timestamptz
 );
 
 -- ============================================================
@@ -446,6 +454,40 @@ using (auth.uid() = id);
 create policy "profiles are updatable by the owner"
 on public.profiles for update
 using (auth.uid() = id);
+
+-- deletion_requested_at is deliberately NOT in the column-level update grant
+-- above (display_name/avatar_url only) — same reasoning as is_super_admin:
+-- a self-service column a user could set directly would be fine here (it's
+-- not a privilege escalation), but routing it through a function lets the
+-- commissioner check below actually be enforced, not just a UI suggestion.
+create function public.request_account_deletion()
+returns void
+language plpgsql
+security definer set search_path = ''
+as $$
+begin
+  if exists (select 1 from public.leagues where commissioner_id = auth.uid()) then
+    raise exception 'You are the commissioner of at least one league — leave or hand those off before requesting deletion';
+  end if;
+
+  update public.profiles set deletion_requested_at = now() where id = auth.uid();
+end;
+$$;
+
+create function public.cancel_account_deletion()
+returns void
+language plpgsql
+security definer set search_path = ''
+as $$
+begin
+  update public.profiles set deletion_requested_at = null where id = auth.uid();
+end;
+$$;
+
+revoke execute on function public.request_account_deletion() from public;
+revoke execute on function public.cancel_account_deletion() from public;
+grant execute on function public.request_account_deletion() to authenticated;
+grant execute on function public.cancel_account_deletion() to authenticated;
 
 -- ============================================================
 -- Leagues: writes go through SECURITY DEFINER functions (so the caller can't

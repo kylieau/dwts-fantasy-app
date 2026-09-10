@@ -4,14 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatDeadline } from "@/lib/use-browser-time-zone";
 
 export function HomeDashboard({
-  rank,
-  totalMembers,
+  standingMessage,
   picksNeeded,
   categoryBreakdown,
   nextDeadline,
 }: {
-  rank: number;
-  totalMembers: number;
+  standingMessage: { placement: string; comment: string };
   picksNeeded: boolean;
   categoryBreakdown: { label: string; points: number }[];
   nextDeadline: { label: string; iso: string } | null;
@@ -21,11 +19,10 @@ export function HomeDashboard({
       <Card>
         <CardHeader>
           <CardTitle>Your Standing</CardTitle>
-          <CardDescription>
-            #{rank} of {totalMembers}
-          </CardDescription>
+          <CardDescription>{standingMessage.placement}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">{standingMessage.comment}</p>
           <span
             className={
               picksNeeded
