@@ -15,6 +15,7 @@ import { GrandFinaleBox } from "@/components/grand-finale-box";
 import { HomeDashboard } from "@/components/home-dashboard";
 import { LeagueHeader } from "@/components/league-header";
 import { LeagueTabs } from "@/components/league-tabs";
+import { WeeklyResultsView } from "@/components/weekly-results-view";
 import { buildCoupleDisplayNames, formatCoupleName } from "@/lib/couple-display";
 
 export default async function LeaguePage({
@@ -65,7 +66,7 @@ export default async function LeaguePage({
         .order("joined_at"),
       supabase
         .from("weekly_manager_scores")
-        .select("manager_id, roster_points, prediction_points, grand_finale_points, total_points")
+        .select("episode_id, manager_id, roster_points, prediction_points, grand_finale_points, total_points")
         .eq("league_id", id),
       supabase
         .from("roster_slots")
@@ -89,17 +90,46 @@ export default async function LeaguePage({
     ]);
 
   const { data: activeSeasonId } = await supabase.rpc("active_season_id");
-  const { data: premiereEpisode } = await supabase
-    .from("episodes")
-    .select("airs_at")
-    .eq("season_id", activeSeasonId ?? "")
-    .eq("week_number", 1)
-    .maybeSingle();
+  const [
+    { data: premiereEpisode },
+    { data: completedEpisodes },
+    { data: danceScores },
+    { data: judgeScores },
+    { data: episodeResults },
+    { data: judges },
+    { data: danceStyles },
+  ] = await Promise.all([
+    supabase
+      .from("episodes")
+      .select("airs_at")
+      .eq("season_id", activeSeasonId ?? "")
+      .eq("week_number", 1)
+      .maybeSingle(),
+    supabase
+      .from("episodes")
+      .select("id, week_number, airs_at, theme, is_finale")
+      .eq("season_id", activeSeasonId ?? "")
+      .eq("status", "completed")
+      .order("week_number", { ascending: false }),
+    supabase.from("dance_scores").select("id, episode_id, couple_id, dance_style_id, total_score"),
+    supabase.from("judge_scores").select("dance_score_id, judge_id, score"),
+    supabase
+      .from("episode_results")
+      .select(
+        "episode_id, couple_id, outcome, was_bottom_two, was_bottom_three, saved_by_judges, was_team_dance, had_immunity, bonus_points, bonus_note"
+      ),
+    supabase.from("people").select("id, name").eq("role", "judge").order("name"),
+    supabase.from("dance_styles").select("id, name").order("name"),
+  ]);
 
   const pointsByManager = new Map<string, number>();
   const rosterPointsByManager = new Map<string, number>();
   const predictionPointsByManager = new Map<string, number>();
   const grandFinalePointsByManager = new Map<string, number>();
+  const scoresByEpisode: Record<
+    string,
+    { managerId: string; rosterPoints: number; predictionPoints: number; grandFinalePoints: number; totalPoints: number }[]
+  > = {};
   for (const row of allScores ?? []) {
     pointsByManager.set(row.manager_id, (pointsByManager.get(row.manager_id) ?? 0) + row.total_points);
     rosterPointsByManager.set(row.manager_id, (rosterPointsByManager.get(row.manager_id) ?? 0) + row.roster_points);
@@ -111,6 +141,13 @@ export default async function LeaguePage({
       row.manager_id,
       (grandFinalePointsByManager.get(row.manager_id) ?? 0) + row.grand_finale_points
     );
+    (scoresByEpisode[row.episode_id] ??= []).push({
+      managerId: row.manager_id,
+      rosterPoints: row.roster_points,
+      predictionPoints: row.prediction_points,
+      grandFinalePoints: row.grand_finale_points,
+      totalPoints: row.total_points,
+    });
   }
 
   const standings = (members ?? []).map((m) => ({
@@ -118,6 +155,10 @@ export default async function LeaguePage({
     displayName: m.profiles?.display_name ?? "Unknown",
     totalPoints: pointsByManager.get(m.user_id) ?? 0,
   }));
+
+  const nameByManager = Object.fromEntries(
+    (members ?? []).map((m) => [m.user_id, m.profiles?.display_name ?? "Unknown"])
+  );
 
   const rank = Math.max(
     1,
@@ -174,7 +215,6 @@ export default async function LeaguePage({
         .eq("league_id", id)
         .eq("episode_id", upcomingEpisode.id);
 
-      const nameByManager = new Map((members ?? []).map((m) => [m.user_id, m.profiles?.display_name ?? "Unknown"]));
       revealedPredictions = (allPredictions ?? []).map((p) => {
         const eliminatedParts = p.predicted_eliminated_couple_id
           ? allDisplayNames.get(p.predicted_eliminated_couple_id)
@@ -183,7 +223,7 @@ export default async function LeaguePage({
           ? allDisplayNames.get(p.predicted_top_scorer_couple_id)
           : undefined;
         return {
-          displayName: nameByManager.get(p.manager_id) ?? "Unknown",
+          displayName: nameByManager[p.manager_id] ?? "Unknown",
           eliminatedLabel: eliminatedParts ? formatCoupleName(eliminatedParts) : null,
           topScorerLabel: topScorerParts ? formatCoupleName(topScorerParts) : null,
         };
@@ -340,12 +380,21 @@ export default async function LeaguePage({
           )
         }
         results={
-          <Card>
-            <CardHeader>
-              <CardTitle>Weekly Results</CardTitle>
-              <CardDescription>Coming soon.</CardDescription>
-            </CardHeader>
-          </Card>
+          <WeeklyResultsView
+            episodes={completedEpisodes ?? []}
+            episodeResults={episodeResults ?? []}
+            danceScores={danceScores ?? []}
+            judgeScores={judgeScores ?? []}
+            judges={judges ?? []}
+            danceStyles={danceStyles ?? []}
+            couples={flatCouples}
+            coupleDisplayNames={Object.fromEntries(allDisplayNames)}
+            nameByManager={nameByManager}
+            scoresByEpisode={scoresByEpisode}
+            danceCardOn={danceCardOn}
+            curtainCallOn={curtainCallOn}
+            grandFinaleOn={grandFinaleOn}
+          />
         }
         standings={
           <div className="flex flex-col gap-6">
