@@ -75,6 +75,10 @@ export function AdminResultsTabs({
 
   return (
     <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
+      <div className="mx-auto max-w-3xl px-4 pt-12">
+        <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
+      </div>
+
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] sm:static sm:border-t-0 sm:border-b sm:pb-0">
         <div className="mx-auto max-w-3xl px-4">
           <TabsList className="h-auto w-full justify-around rounded-none bg-transparent p-1 sm:w-fit sm:justify-start sm:gap-1">
@@ -92,9 +96,7 @@ export function AdminResultsTabs({
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-12 pb-20 sm:pb-12">
-        <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
-
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pb-20 pt-6 sm:pb-12">
         <TabsContent value="enter">
           <ResultsForm
             couples={activeCouples}
