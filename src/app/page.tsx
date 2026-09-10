@@ -1,4 +1,16 @@
-export default function Home() {
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/today");
+  }
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-4 py-24 text-center">
       <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">

@@ -950,6 +950,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      leave_league: {
+        Args: { p_league_id: string }
+        Returns: undefined
+      }
       make_draft_pick: {
         Args: { p_couple_id: string; p_league_id: string }
         Returns: {

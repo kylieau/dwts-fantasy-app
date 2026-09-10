@@ -33,7 +33,7 @@ export function NativeAuthListener() {
       const supabase = createClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       window.location.assign(
-        error ? `/login?error=${encodeURIComponent(error.message)}` : "/"
+        error ? `/login?error=${encodeURIComponent(error.message)}` : "/today"
       );
     });
 

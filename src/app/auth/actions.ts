@@ -18,7 +18,7 @@ export async function signIn(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect("/today");
 }
 
 export async function signUp(formData: FormData) {

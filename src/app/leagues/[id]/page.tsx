@@ -262,6 +262,9 @@ export default async function LeaguePage({
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
+      <Link href="/leagues" className="text-sm text-muted-foreground hover:text-foreground">
+        ‹ Leagues
+      </Link>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{league.name}</h1>

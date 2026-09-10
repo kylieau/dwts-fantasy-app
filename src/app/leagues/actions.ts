@@ -37,3 +37,15 @@ export async function joinLeague(formData: FormData) {
   revalidatePath("/leagues", "layout");
   redirect(`/leagues/${data.id}`);
 }
+
+export async function leaveLeague(leagueId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("leave_league", { p_league_id: leagueId });
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/today");
+  revalidatePath("/leagues", "layout");
+  return { error: null };
+}

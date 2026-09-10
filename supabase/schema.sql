@@ -514,10 +514,40 @@ begin
 end;
 $$;
 
+-- Deliberately does NOT cascade-delete roster_slots/predictions/
+-- grand_finale_predictions/weekly_manager_scores for the departing manager —
+-- those stay intact for the league's own history/standings math. Leaving
+-- just revokes membership/visibility going forward, same as a real sports
+-- league handles someone dropping out mid-season. No ownership-transfer flow
+-- exists yet, so the commissioner can't leave their own league at all.
+create function public.leave_league(p_league_id uuid)
+returns void
+language plpgsql
+security definer set search_path = ''
+as $$
+begin
+  if exists (
+    select 1 from public.leagues
+    where id = p_league_id and commissioner_id = auth.uid()
+  ) then
+    raise exception 'Commissioners can''t leave their own league';
+  end if;
+
+  delete from public.league_members
+  where league_id = p_league_id and user_id = auth.uid();
+
+  if not found then
+    raise exception 'You are not a member of this league';
+  end if;
+end;
+$$;
+
 revoke execute on function public.create_league(text) from public;
 revoke execute on function public.join_league(text) from public;
+revoke execute on function public.leave_league(uuid) from public;
 grant execute on function public.create_league(text) to authenticated;
 grant execute on function public.join_league(text) to authenticated;
+grant execute on function public.leave_league(uuid) to authenticated;
 
 grant select on public.leagues to authenticated;
 grant select on public.league_members to authenticated;
