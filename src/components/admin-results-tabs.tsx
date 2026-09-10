@@ -76,18 +76,20 @@ export function AdminResultsTabs({
   return (
     <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] sm:static sm:border-t-0 sm:border-b sm:pb-0">
-        <TabsList className="mx-auto h-auto w-full max-w-3xl justify-around rounded-none bg-transparent p-1 sm:w-fit sm:justify-start sm:gap-1">
-          {TABS.map(({ value, label, icon: Icon }) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              className="h-auto flex-col gap-0.5 rounded-md px-2 py-1.5 sm:flex-row sm:gap-1.5 sm:px-3"
-            >
-              <Icon className="size-5 sm:size-4" />
-              <span className="text-[10px] sm:text-sm">{label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="mx-auto max-w-3xl px-4">
+          <TabsList className="h-auto w-full justify-around rounded-none bg-transparent p-1 sm:w-fit sm:justify-start sm:gap-1">
+            {TABS.map(({ value, label, icon: Icon }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="h-auto flex-col gap-0.5 rounded-md px-2 py-1.5 sm:flex-row sm:gap-1.5 sm:px-3"
+              >
+                <Icon className="size-5 sm:size-4" />
+                <span className="text-[10px] sm:text-sm">{label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
       </div>
 
       <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-12 pb-20 sm:pb-12">
