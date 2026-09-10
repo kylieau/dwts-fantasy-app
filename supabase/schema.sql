@@ -463,6 +463,7 @@ declare
   v_chars text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; -- no 0/O/1/I/L to avoid ambiguity
   v_code text;
   v_i int;
+  v_premiere_airs_at timestamptz;
 begin
   if trim(p_name) = '' then
     raise exception 'League name is required';
@@ -483,8 +484,24 @@ begin
   insert into public.league_members (league_id, user_id, role)
   values (v_league.id, auth.uid(), 'commissioner');
 
-  insert into public.scoring_settings (league_id)
-  values (v_league.id);
+  -- Dance Card and Curtain Call default on via their own column defaults.
+  -- Grand Finale defaults on too, but only when a premiere date is already
+  -- known to default its deadline against — bonus_picks_config_required
+  -- requires a non-null deadline+method the moment it's enabled, and there's
+  -- no honest deadline to default to before a season's Week 1 is scheduled.
+  select airs_at into v_premiere_airs_at
+  from public.episodes
+  where season_id = public.active_season_id() and week_number = 1;
+
+  insert into public.scoring_settings (
+    league_id, bonus_picks_category_enabled, bonus_picks_scoring_method, bonus_picks_deadline
+  )
+  values (
+    v_league.id,
+    v_premiere_airs_at is not null,
+    case when v_premiere_airs_at is not null then 'exact_position' end,
+    v_premiere_airs_at
+  );
 
   return v_league;
 end;

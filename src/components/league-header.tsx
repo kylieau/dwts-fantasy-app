@@ -70,7 +70,7 @@ export function LeagueHeader({
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-4">
             <span className="font-mono text-2xl font-bold tracking-widest">{inviteCode}</span>
-            <SheetTrigger render={<Button size="sm" />}>Review scoring settings</SheetTrigger>
+            <SheetTrigger render={<Button size="sm" />}>Set league rules</SheetTrigger>
           </CardContent>
         </Card>
       )}
