@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormStatus } from "react-dom";
 import { createLeague, joinLeague } from "@/app/leagues/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
+function SubmitButton({ idleLabel, pendingLabel }: { idleLabel: string; pendingLabel: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? pendingLabel : idleLabel}
+    </Button>
+  );
+}
 
 export function CreateJoinLeagueDialogs() {
   return (
@@ -32,7 +42,7 @@ export function CreateJoinLeagueDialogs() {
               <Input id="name" name="name" required />
             </div>
             <DialogFooter>
-              <Button type="submit">Create league</Button>
+              <SubmitButton idleLabel="Create league" pendingLabel="Creating..." />
             </DialogFooter>
           </form>
         </DialogContent>
@@ -59,7 +69,7 @@ export function CreateJoinLeagueDialogs() {
               />
             </div>
             <DialogFooter>
-              <Button type="submit">Join league</Button>
+              <SubmitButton idleLabel="Join league" pendingLabel="Joining..." />
             </DialogFooter>
           </form>
         </DialogContent>

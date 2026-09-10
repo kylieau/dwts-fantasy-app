@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { AccountTabBar } from "@/components/account-tab-bar";
-import { LeaveLeagueSection } from "@/components/leave-league-section";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRightIcon } from "lucide-react";
 
 const PLACEHOLDER_ROWS = ["Profile", "Notifications", "Appearance", "Account & data"];
@@ -21,15 +20,11 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  const [{ data: profile }, { data: memberships }] = await Promise.all([
-    supabase.from("profiles").select("is_super_admin").eq("id", user.id).single(),
-    supabase.from("league_members").select("leagues(id, name, commissioner_id)").eq("user_id", user.id),
-  ]);
-
-  const leaveableLeagues = (memberships ?? [])
-    .map((m) => m.leagues!)
-    .filter(Boolean)
-    .map((l) => ({ id: l.id, name: l.name, isCommissioner: l.commissioner_id === user.id }));
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_super_admin")
+    .eq("id", user.id)
+    .single();
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
@@ -52,18 +47,6 @@ export default async function SettingsPage() {
                 <span className="text-xs">Coming soon</span>
               </div>
             ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Leave a League</CardTitle>
-            <CardDescription>
-              Removes you from a league — your historical scores stay on record.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LeaveLeagueSection leagues={leaveableLeagues} />
           </CardContent>
         </Card>
 

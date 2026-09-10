@@ -542,12 +542,66 @@ begin
 end;
 $$;
 
+-- Separate from update_league_settings (waiver/draft-timer config) since
+-- renaming applies regardless of which modules are on, so the form that
+-- edits it shouldn't be entangled with the Dance-Card-conditional section
+-- those other fields live in.
+create function public.rename_league(p_league_id uuid, p_name text)
+returns public.leagues
+language plpgsql
+security definer set search_path = ''
+as $$
+declare
+  v_league public.leagues;
+begin
+  if trim(p_name) = '' then
+    raise exception 'League name is required';
+  end if;
+
+  update public.leagues
+  set name = trim(p_name)
+  where id = p_league_id and commissioner_id = auth.uid()
+  returning * into v_league;
+
+  if not found then
+    raise exception 'Only the commissioner can rename this league';
+  end if;
+
+  return v_league;
+end;
+$$;
+
+-- No membership-count restriction — available to the commissioner any time,
+-- not just before anyone else has joined. The UI is expected to gate this
+-- behind a strong confirmation (e.g. typing the league name) instead, since
+-- a member-count rule would just make it useless once a league has grown.
+-- Every dependent table already cascades on leagues(id) on delete cascade,
+-- so a plain delete here is a complete, clean removal with no manual cleanup.
+create function public.delete_league(p_league_id uuid)
+returns void
+language plpgsql
+security definer set search_path = ''
+as $$
+begin
+  delete from public.leagues
+  where id = p_league_id and commissioner_id = auth.uid();
+
+  if not found then
+    raise exception 'Only the commissioner can delete this league';
+  end if;
+end;
+$$;
+
 revoke execute on function public.create_league(text) from public;
 revoke execute on function public.join_league(text) from public;
 revoke execute on function public.leave_league(uuid) from public;
+revoke execute on function public.rename_league(uuid, text) from public;
+revoke execute on function public.delete_league(uuid) from public;
 grant execute on function public.create_league(text) to authenticated;
 grant execute on function public.join_league(text) to authenticated;
 grant execute on function public.leave_league(uuid) to authenticated;
+grant execute on function public.rename_league(uuid, text) to authenticated;
+grant execute on function public.delete_league(uuid) to authenticated;
 
 grant select on public.leagues to authenticated;
 grant select on public.league_members to authenticated;

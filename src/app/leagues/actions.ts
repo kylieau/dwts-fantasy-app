@@ -16,11 +16,7 @@ export async function createLeague(formData: FormData) {
   }
 
   revalidatePath("/leagues", "layout");
-  redirect(
-    `/leagues/${data.id}?openSettings=1&message=${encodeURIComponent(
-      "Review and save Modules to finish setting up your league"
-    )}`
-  );
+  redirect(`/leagues/${data.id}?justCreated=1`);
 }
 
 export async function joinLeague(formData: FormData) {

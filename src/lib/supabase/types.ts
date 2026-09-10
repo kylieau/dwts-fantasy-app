@@ -905,6 +905,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_league: {
+        Args: { p_league_id: string }
+        Returns: undefined
+      }
       finalize_waiver_claim: {
         Args: { p_claim_id: string }
         Returns: {
@@ -997,6 +1001,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "waiver_claims"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rename_league: {
+        Args: { p_league_id: string; p_name: string }
+        Returns: {
+          commissioner_id: string
+          created_at: string
+          draft_scheduled_at: string | null
+          draft_status: string
+          id: string
+          invite_code: string
+          name: string
+          pick_time_limit_seconds: number
+          prediction_lock_hours_before_air: number
+          roster_size: number
+          waiver_claim_method: string | null
+          waiver_mode: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leagues"
           isOneToOne: true
           isSetofReturn: false
         }

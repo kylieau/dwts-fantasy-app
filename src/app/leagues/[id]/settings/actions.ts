@@ -1,7 +1,34 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+
+export async function renameLeague(
+  leagueId: string,
+  name: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("rename_league", { p_league_id: leagueId, p_name: name });
+  if (error) return { error: error.message };
+
+  revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath("/leagues", "layout");
+  revalidatePath("/today");
+  return { error: null };
+}
+
+export async function deleteLeague(leagueId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("delete_league", { p_league_id: leagueId });
+  if (error) return { error: error.message };
+
+  revalidatePath("/leagues", "layout");
+  revalidatePath("/today");
+  redirect("/leagues");
+}
 
 export type LeagueSettingsInput = {
   waiverMode: "locked" | "waivers";

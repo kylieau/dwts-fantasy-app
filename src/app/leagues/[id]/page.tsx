@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,7 +13,7 @@ import { RosterCard } from "@/components/roster-card";
 import { PickEmBox } from "@/components/pick-em-box";
 import { GrandFinaleBox } from "@/components/grand-finale-box";
 import { HomeDashboard } from "@/components/home-dashboard";
-import { LeagueSettingsSheet } from "@/components/league-settings-sheet";
+import { LeagueHeader } from "@/components/league-header";
 import { LeagueTabs } from "@/components/league-tabs";
 import { buildCoupleDisplayNames, formatCoupleName } from "@/lib/couple-display";
 
@@ -23,10 +22,10 @@ export default async function LeaguePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; message?: string; openSettings?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; justCreated?: string }>;
 }) {
   const { id } = await params;
-  const { error, message, openSettings } = await searchParams;
+  const { error, message, justCreated } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -50,14 +49,6 @@ export default async function LeaguePage({
     .single();
 
   const isCommissioner = league.commissioner_id === user.id;
-
-  if (isCommissioner && scoringSettings && !scoringSettings.scoring_configured) {
-    redirect(
-      `/leagues/${id}?openSettings=1&message=${encodeURIComponent(
-        "Review and save Modules to finish setting up your league"
-      )}`
-    );
-  }
 
   const danceCardOn = scoringSettings?.judges_score_category_enabled ?? true;
   const curtainCallOn = scoringSettings?.eliminations_category_enabled ?? true;
@@ -265,39 +256,23 @@ export default async function LeaguePage({
       <Link href="/leagues" className="text-sm text-muted-foreground hover:text-foreground">
         ‹ Leagues
       </Link>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{league.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Invite code:{" "}
-            <span className="font-mono font-medium text-foreground">
-              {league.invite_code}
-            </span>
-          </p>
-          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-          {message && <p className="mt-2 text-sm text-muted-foreground">{message}</p>}
-        </div>
-        <div className="flex gap-2">
-          {danceCardOn && (
-            <Button render={<Link href={`/leagues/${id}/draft`} />} size="sm">
-              Draft room
-            </Button>
-          )}
-          {danceCardOn && league.waiver_mode === "waivers" && (
-            <Button render={<Link href={`/leagues/${id}/waivers`} />} variant="outline" size="sm">
-              Waivers
-            </Button>
-          )}
-          <LeagueSettingsSheet
-            leagueId={id}
-            league={league}
-            scoringSettings={scoringSettings}
-            canEdit={isCommissioner}
-            premiereAirsAt={premiereEpisode?.airs_at ?? null}
-            defaultOpen={openSettings === "1"}
-          />
-        </div>
-      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {message && <p className="text-sm text-muted-foreground">{message}</p>}
+
+      <LeagueHeader
+        leagueId={id}
+        leagueName={league.name}
+        inviteCode={league.invite_code}
+        danceCardOn={danceCardOn}
+        waiversOn={league.waiver_mode === "waivers"}
+        league={league}
+        scoringSettings={scoringSettings}
+        canEdit={isCommissioner}
+        premiereAirsAt={premiereEpisode?.airs_at ?? null}
+        justCreated={justCreated === "1"}
+        scoringConfigured={scoringSettings?.scoring_configured ?? true}
+      />
 
       <LeagueTabs
         home={

@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AccountTabBar } from "@/components/account-tab-bar";
 import { CreateJoinLeagueDialogs } from "@/components/create-join-league-dialogs";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LeaveLeagueButton } from "@/components/leave-league-button";
+import { Card, CardContent } from "@/components/ui/card";
+import { CrownIcon } from "lucide-react";
 
 export default async function LeaguesPage({
   searchParams,
@@ -23,7 +25,7 @@ export default async function LeaguesPage({
 
   const { data: memberships } = await supabase
     .from("league_members")
-    .select("role, leagues(id, name)")
+    .select("role, leagues(id, name, commissioner_id)")
     .eq("user_id", user.id);
 
   return (
@@ -42,16 +44,30 @@ export default async function LeaguesPage({
 
         {memberships && memberships.length > 0 ? (
           <div className="flex flex-col gap-2">
-            {memberships.map((m) => (
-              <Link key={m.leagues!.id} href={`/leagues/${m.leagues!.id}`}>
-                <Card className="transition-colors hover:bg-muted">
-                  <CardHeader>
-                    <CardTitle>{m.leagues!.name}</CardTitle>
-                    <CardDescription className="capitalize">{m.role}</CardDescription>
-                  </CardHeader>
+            {memberships.map((m) => {
+              const league = m.leagues!;
+              const isCommissioner = league.commissioner_id === user.id;
+              return (
+                <Card key={league.id}>
+                  <CardContent className="flex items-center justify-between gap-3 py-4">
+                    <Link href={`/leagues/${league.id}`} className="flex flex-1 flex-col gap-0.5">
+                      <span className="flex items-center gap-1.5 text-sm font-medium">
+                        {isCommissioner && (
+                          <CrownIcon className="size-3.5 text-primary" aria-hidden />
+                        )}
+                        {league.name}
+                      </span>
+                      <span className="text-xs capitalize text-muted-foreground">{m.role}</span>
+                    </Link>
+                    <LeaveLeagueButton
+                      leagueId={league.id}
+                      leagueName={league.name}
+                      isCommissioner={isCommissioner}
+                    />
+                  </CardContent>
                 </Card>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
