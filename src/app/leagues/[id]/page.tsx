@@ -179,7 +179,7 @@ export default async function LeaguePage({
     totalMembers: standings.length,
     isTiedForFirst,
     isTiedForLast,
-    seed: `${user.id}-${completedEpisodes?.[0]?.week_number ?? 0}`,
+    isPreSeason: (allScores ?? []).length === 0,
   });
 
   const flatCouples = (allCouples ?? []).map((c) => ({

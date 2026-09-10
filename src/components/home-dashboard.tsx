@@ -22,7 +22,9 @@ export function HomeDashboard({
           <CardDescription>{standingMessage.placement}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <p className="text-sm text-muted-foreground">{standingMessage.comment}</p>
+          {standingMessage.comment && (
+            <p className="text-sm text-muted-foreground">{standingMessage.comment}</p>
+          )}
           <span
             className={
               picksNeeded

@@ -1,14 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { formatCountdown } from "@/lib/format-countdown";
+import { getRankBadge, NEUTRAL_BADGE } from "@/lib/rank-badge";
 
 export type LeagueSummary = {
   id: string;
   name: string;
   needsAttention: boolean;
   statusText: string;
-  rank: number;
-  totalMembers: number;
+  rankBadge: string;
 };
 
 // Shared by /today (cross-league dashboard) and /notifications (the same
@@ -90,14 +90,9 @@ export async function computeLeagueSummary(
   for (const row of scores ?? []) {
     pointsByManager.set(row.manager_id, (pointsByManager.get(row.manager_id) ?? 0) + row.total_points);
   }
-  const totalMembers = members?.length ?? 0;
-  const rank = Math.max(
-    1,
-    (members ?? [])
-      .map((m) => ({ userId: m.user_id, points: pointsByManager.get(m.user_id) ?? 0 }))
-      .sort((a, b) => b.points - a.points)
-      .findIndex((m) => m.userId === userId) + 1
-  );
+  const allPoints = (members ?? []).map((m) => pointsByManager.get(m.user_id) ?? 0);
+  const userPoints = pointsByManager.get(userId) ?? 0;
+  const rankBadge = (scores ?? []).length === 0 ? NEUTRAL_BADGE : getRankBadge(userPoints, allPoints);
 
-  return { id: league.id, name: league.name, needsAttention, statusText, rank, totalMembers };
+  return { id: league.id, name: league.name, needsAttention, statusText, rankBadge };
 }

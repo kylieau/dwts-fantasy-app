@@ -1,59 +1,85 @@
 import { describe, expect, it } from "vitest";
-import { getStandingMessage } from "./standings-message";
+import { getStandingMessage, resolveStandingTier } from "./standings-message";
 
-function placementFor(rank: number, totalMembers: number, ties: { first?: boolean; last?: boolean } = {}) {
-  return getStandingMessage({
-    rank,
-    totalMembers,
-    isTiedForFirst: !!ties.first,
-    isTiedForLast: !!ties.last,
-    seed: "seed",
-  }).placement;
-}
-
-describe("getStandingMessage tiers", () => {
+describe("resolveStandingTier", () => {
   it("labels first and last place in a large league", () => {
-    expect(placementFor(1, 10)).toMatch(/first place/);
-    expect(placementFor(10, 10)).toMatch(/last place/);
-    expect(placementFor(2, 10)).toMatch(/second place/);
-    expect(placementFor(9, 10)).toMatch(/last place/); // close-to-last variant
-    expect(placementFor(5, 10)).toMatch(/middle/);
+    expect(resolveStandingTier(1, 10, false, false, false)).toBe("first");
+    expect(resolveStandingTier(10, 10, false, false, false)).toBe("last");
+    expect(resolveStandingTier(2, 10, false, false, false)).toBe("second");
+    expect(resolveStandingTier(9, 10, false, false, false)).toBe("close-to-last");
+    expect(resolveStandingTier(5, 10, false, false, false)).toBe("middle");
+  });
+
+  it("prioritizes pre-season over every other signal", () => {
+    expect(resolveStandingTier(1, 10, true, false, true)).toBe("pre-season");
+    expect(resolveStandingTier(10, 10, false, true, true)).toBe("pre-season");
   });
 
   it("prioritizes tie variants over the plain tier", () => {
-    expect(placementFor(1, 4, { first: true })).toMatch(/tied for first/);
-    expect(placementFor(4, 4, { last: true })).toMatch(/tied for last/);
+    expect(resolveStandingTier(1, 4, true, false, false)).toBe("tied-first");
+    expect(resolveStandingTier(4, 4, false, true, false)).toBe("tied-last");
   });
 
   it("collapses tiers gracefully for a 2-person league", () => {
-    expect(placementFor(1, 2)).toMatch(/first place/);
-    expect(placementFor(2, 2)).toMatch(/last place/);
+    expect(resolveStandingTier(1, 2, false, false, false)).toBe("first");
+    expect(resolveStandingTier(2, 2, false, false, false)).toBe("last");
   });
 
   it("collapses tiers gracefully for a 3-person league", () => {
-    expect(placementFor(1, 3)).toMatch(/first place/);
-    expect(placementFor(2, 3)).toMatch(/second place/);
-    expect(placementFor(3, 3)).toMatch(/last place/);
+    expect(resolveStandingTier(1, 3, false, false, false)).toBe("first");
+    expect(resolveStandingTier(2, 3, false, false, false)).toBe("second");
+    expect(resolveStandingTier(3, 3, false, false, false)).toBe("last");
   });
 
   it("has room for a close-to-last tier once the league is big enough", () => {
-    expect(placementFor(3, 5)).toMatch(/middle/);
-    expect(placementFor(4, 5)).not.toBe(placementFor(5, 5)); // close-to-last is distinct from last
+    expect(resolveStandingTier(3, 5, false, false, false)).toBe("middle");
+    expect(resolveStandingTier(4, 5, false, false, false)).toBe("close-to-last");
+    expect(resolveStandingTier(5, 5, false, false, false)).toBe("last");
   });
 
   it("returns a solo member as first place", () => {
-    expect(placementFor(1, 1)).toMatch(/first place/);
+    expect(resolveStandingTier(1, 1, false, false, false)).toBe("first");
+  });
+});
+
+describe("getStandingMessage", () => {
+  it("returns non-empty copy for every tier", () => {
+    const cases: [number, number, boolean, boolean, boolean][] = [
+      [1, 10, false, false, false],
+      [1, 10, true, false, false],
+      [2, 10, false, false, false],
+      [5, 10, false, false, false],
+      [9, 10, false, false, false],
+      [10, 10, false, false, false],
+      [10, 10, false, true, false],
+      [1, 10, false, false, true],
+    ];
+    for (const [rank, totalMembers, isTiedForFirst, isTiedForLast, isPreSeason] of cases) {
+      const message = getStandingMessage({ rank, totalMembers, isTiedForFirst, isTiedForLast, isPreSeason });
+      expect(message.placement.length).toBeGreaterThan(0);
+    }
   });
 
-  it("rotates variants based on the seed", () => {
-    const seeds = ["a", "b", "c", "d", "e", "f"];
+  it("rotates variants randomly across calls", () => {
     const comments = new Set(
-      seeds.map(
-        (seed) =>
-          getStandingMessage({ rank: 1, totalMembers: 10, isTiedForFirst: false, isTiedForLast: false, seed })
-            .comment
+      Array.from(
+        { length: 30 },
+        () => getStandingMessage({ rank: 1, totalMembers: 10, isTiedForFirst: false, isTiedForLast: false, isPreSeason: false }).comment
       )
     );
     expect(comments.size).toBeGreaterThan(1);
+  });
+
+  it("only ever returns pre-season copy while pre-season, regardless of rank", () => {
+    for (let i = 0; i < 20; i++) {
+      const message = getStandingMessage({
+        rank: 1,
+        totalMembers: 10,
+        isTiedForFirst: true,
+        isTiedForLast: false,
+        isPreSeason: true,
+      });
+      expect(message.placement).not.toMatch(/first place/);
+    }
   });
 });

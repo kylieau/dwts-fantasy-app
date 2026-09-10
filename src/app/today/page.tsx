@@ -159,9 +159,7 @@ export default async function TodayPage() {
                       <span className="text-sm font-medium">{s.name}</span>
                       <span className="text-xs text-muted-foreground">{s.statusText}</span>
                     </div>
-                    <span className="text-sm font-medium text-muted-foreground">
-                      #{s.rank} / {s.totalMembers}
-                    </span>
+                    <span className="inline-flex w-8 shrink-0 justify-center text-lg">{s.rankBadge}</span>
                   </CardContent>
                 </Card>
               </Link>
