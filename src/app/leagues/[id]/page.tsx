@@ -334,6 +334,10 @@ export default async function LeaguePage({
       <LeagueTabs
         home={
           <HomeDashboard
+            leagueId={id}
+            rank={rank}
+            totalMembers={standings.length}
+            totalPoints={userPoints}
             standingMessage={standingMessage}
             picksNeeded={picksNeeded}
             categoryBreakdown={categoryBreakdown}

@@ -10,13 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Chip } from "@/components/chip";
 import type { CoupleNameParts } from "@/lib/couple-display";
 import { coupleNameNode } from "@/components/couple-name";
 import { useFormattedDeadline } from "@/lib/use-browser-time-zone";
@@ -60,12 +54,12 @@ export function PickEmBox({
   const [saved, setSaved] = useState(false);
   const formattedLockAt = useFormattedDeadline(lockAt);
 
-  const coupleItems = Object.fromEntries(
-    activeCouples.map((c) => [
-      c.id,
-      coupleNameNode(coupleDisplayNames[c.id] ?? { celebrity: c.celebrity_name, pro: c.pro_name }),
-    ])
-  );
+  function nameFor(coupleId: string) {
+    const c = activeCouples.find((c) => c.id === coupleId);
+    return coupleNameNode(
+      coupleDisplayNames[coupleId] ?? { celebrity: c?.celebrity_name ?? "Unknown", pro: c?.pro_name ?? "Unknown" }
+    );
+  }
 
   if (!episode) {
     return (
@@ -113,33 +107,31 @@ export function PickEmBox({
           <>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Who Gets Eliminated?</label>
-              <Select items={coupleItems} value={eliminatedId} onValueChange={(v) => setEliminatedId(v ?? "")}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pick a Couple" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeCouples.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {coupleItems[c.id]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {activeCouples.map((c) => (
+                  <Chip
+                    key={c.id}
+                    selected={eliminatedId === c.id}
+                    onClick={() => setEliminatedId(eliminatedId === c.id ? "" : c.id)}
+                  >
+                    {nameFor(c.id)}
+                  </Chip>
+                ))}
+              </div>
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Who Scores Highest?</label>
-              <Select items={coupleItems} value={topScorerId} onValueChange={(v) => setTopScorerId(v ?? "")}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pick a Couple" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeCouples.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {coupleItems[c.id]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {activeCouples.map((c) => (
+                  <Chip
+                    key={c.id}
+                    selected={topScorerId === c.id}
+                    onClick={() => setTopScorerId(topScorerId === c.id ? "" : c.id)}
+                  >
+                    {nameFor(c.id)}
+                  </Chip>
+                ))}
+              </div>
             </div>
             <Button onClick={handleSubmit} disabled={submitting}>
               {submitting ? "Saving..." : "Save prediction"}
