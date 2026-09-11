@@ -6,6 +6,7 @@ import { App, type URLOpenListenerEvent } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase/client";
 import { NATIVE_AUTH_SCHEME } from "@/lib/native-auth";
+import { getDefaultLandingPath } from "@/lib/default-landing";
 
 // Catches the deep link Google/Supabase redirect to once native OAuth
 // (started in GoogleSignInButton) finishes in the system browser, then
@@ -31,9 +32,11 @@ export function NativeAuthListener() {
       }
 
       const supabase = createClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
       window.location.assign(
-        error ? `/login?error=${encodeURIComponent(error.message)}` : "/today"
+        error
+          ? `/login?error=${encodeURIComponent(error.message)}`
+          : await getDefaultLandingPath(supabase, data.user.id)
       );
     });
 

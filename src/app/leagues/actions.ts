@@ -41,7 +41,6 @@ export async function leaveLeague(leagueId: string): Promise<{ error: string | n
   if (error) return { error: error.message };
 
   revalidatePath("/settings");
-  revalidatePath("/today");
   revalidatePath("/leagues", "layout");
   return { error: null };
 }

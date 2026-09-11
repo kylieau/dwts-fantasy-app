@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
-import { AccountTabBar } from "@/components/account-tab-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRightIcon } from "lucide-react";
@@ -37,9 +36,11 @@ export default async function SettingsPage({
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
-      <AccountTabBar />
+      <div className="flex flex-col gap-6">
+        <Link href="/leagues" className="text-sm font-medium text-muted-foreground">
+          ‹ Back
+        </Link>
 
-      <div className="flex flex-col gap-6 pb-20 sm:pb-0">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
           <p className="mt-1 text-sm text-muted-foreground">Account-wide</p>

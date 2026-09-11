@@ -15,7 +15,6 @@ export async function renameLeague(
 
   revalidatePath(`/leagues/${leagueId}`);
   revalidatePath("/leagues", "layout");
-  revalidatePath("/today");
   return { error: null };
 }
 
@@ -26,7 +25,6 @@ export async function deleteLeague(leagueId: string): Promise<{ error: string | 
   if (error) return { error: error.message };
 
   revalidatePath("/leagues", "layout");
-  revalidatePath("/today");
   redirect("/leagues");
 }
 

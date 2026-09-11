@@ -4,11 +4,12 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getDefaultLandingPath } from "@/lib/default-landing";
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: formData.get("email") as string,
     password: formData.get("password") as string,
   });
@@ -18,7 +19,7 @@ export async function signIn(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/today");
+  redirect(await getDefaultLandingPath(supabase, data.user.id));
 }
 
 export async function signUp(formData: FormData) {

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AccountTabBar } from "@/components/account-tab-bar";
 import { CreateJoinLeagueDialogs } from "@/components/create-join-league-dialogs";
 import { LeaveLeagueButton } from "@/components/leave-league-button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,9 +29,16 @@ export default async function LeaguesPage({
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
-      <AccountTabBar />
+      <div className="flex flex-col gap-6">
+        {memberships && memberships.length > 0 && (
+          <Link
+            href={`/leagues/${memberships[0].leagues!.id}`}
+            className="text-sm font-medium text-muted-foreground"
+          >
+            ‹ Back
+          </Link>
+        )}
 
-      <div className="flex flex-col gap-6 pb-20 sm:pb-0">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Leagues</h1>
