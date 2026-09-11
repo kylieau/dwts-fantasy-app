@@ -495,7 +495,12 @@ grant execute on function public.cancel_account_deletion() to authenticated;
 -- scoped by RLS to leagues/members the caller actually belongs to.
 -- ============================================================
 
-create function public.create_league(p_name text)
+create function public.create_league(
+  p_name text,
+  p_dance_card_enabled boolean default true,
+  p_curtain_call_enabled boolean default true,
+  p_grand_finale_enabled boolean default true
+)
 returns public.leagues
 language plpgsql
 security definer set search_path = ''
@@ -506,9 +511,22 @@ declare
   v_code text;
   v_i int;
   v_premiere_airs_at timestamptz;
+  v_grand_finale_enabled boolean;
 begin
   if trim(p_name) = '' then
     raise exception 'League name is required';
+  end if;
+
+  -- Grand Finale needs a deadline the moment it's enabled — there's no
+  -- honest deadline to default to before a season's Week 1 is scheduled, so
+  -- the commissioner's choice is only honored once a premiere date exists.
+  select airs_at into v_premiere_airs_at
+  from public.episodes
+  where season_id = public.active_season_id() and week_number = 1;
+  v_grand_finale_enabled := p_grand_finale_enabled and v_premiere_airs_at is not null;
+
+  if not (p_dance_card_enabled or p_curtain_call_enabled or v_grand_finale_enabled) then
+    raise exception 'At least one scoring module must be enabled';
   end if;
 
   loop
@@ -526,23 +544,26 @@ begin
   insert into public.league_members (league_id, user_id, role)
   values (v_league.id, auth.uid(), 'commissioner');
 
-  -- Dance Card and Curtain Call default on via their own column defaults.
-  -- Grand Finale defaults on too, but only when a premiere date is already
-  -- known to default its deadline against — bonus_picks_config_required
-  -- requires a non-null deadline+method the moment it's enabled, and there's
-  -- no honest deadline to default to before a season's Week 1 is scheduled.
-  select airs_at into v_premiere_airs_at
-  from public.episodes
-  where season_id = public.active_season_id() and week_number = 1;
-
+  -- The commissioner explicitly reviewed these toggles during creation
+  -- (unlike the old name-only flow), so scoring_configured is true right
+  -- away — no post-creation "finish setup" prompt for new leagues.
   insert into public.scoring_settings (
-    league_id, bonus_picks_category_enabled, bonus_picks_scoring_method, bonus_picks_deadline
+    league_id,
+    judges_score_category_enabled,
+    eliminations_category_enabled,
+    bonus_picks_category_enabled,
+    bonus_picks_scoring_method,
+    bonus_picks_deadline,
+    scoring_configured
   )
   values (
     v_league.id,
-    v_premiere_airs_at is not null,
-    case when v_premiere_airs_at is not null then 'exact_position' end,
-    v_premiere_airs_at
+    p_dance_card_enabled,
+    p_curtain_call_enabled,
+    v_grand_finale_enabled,
+    case when v_grand_finale_enabled then 'exact_position' end,
+    case when v_grand_finale_enabled then v_premiere_airs_at end,
+    true
   );
 
   return v_league;
@@ -651,12 +672,12 @@ begin
 end;
 $$;
 
-revoke execute on function public.create_league(text) from public;
+revoke execute on function public.create_league(text, boolean, boolean, boolean) from public;
 revoke execute on function public.join_league(text) from public;
 revoke execute on function public.leave_league(uuid) from public;
 revoke execute on function public.rename_league(uuid, text) from public;
 revoke execute on function public.delete_league(uuid) from public;
-grant execute on function public.create_league(text) to authenticated;
+grant execute on function public.create_league(text, boolean, boolean, boolean) to authenticated;
 grant execute on function public.join_league(text) to authenticated;
 grant execute on function public.leave_league(uuid) to authenticated;
 grant execute on function public.rename_league(uuid, text) to authenticated;

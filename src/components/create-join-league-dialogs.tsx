@@ -14,6 +14,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { MODULE_INFO } from "@/components/league-modules-form";
+
+const MODULE_FIELD_NAMES = ["danceCardEnabled", "curtainCallEnabled", "grandFinaleEnabled"] as const;
 
 function SubmitButton({ idleLabel, pendingLabel }: { idleLabel: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
@@ -40,6 +43,26 @@ export function CreateJoinLeagueDialogs() {
             <div className="flex flex-col gap-2">
               <Label htmlFor="name">League Name</Label>
               <Input id="name" name="name" required />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label>Scoring Modules</Label>
+              <div className="flex flex-col">
+                {MODULE_INFO.map((m, i) => (
+                  <label
+                    key={m.name}
+                    className="grid grid-cols-[1fr_1fr] items-center gap-4 border-b border-border py-2 text-sm last:border-b-0"
+                  >
+                    <span className="flex items-center gap-2 font-medium">
+                      <input type="checkbox" name={MODULE_FIELD_NAMES[i]} defaultChecked />
+                      {m.name}
+                    </span>
+                    <span className="text-muted-foreground">{m.description}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Weights and Grand Finale scoring details can be fine-tuned later in League Settings.
+              </p>
             </div>
             <DialogFooter>
               <SubmitButton idleLabel="Create league" pendingLabel="Creating..." />

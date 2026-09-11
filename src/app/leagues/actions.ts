@@ -9,6 +9,9 @@ export async function createLeague(formData: FormData) {
 
   const { data, error } = await supabase.rpc("create_league", {
     p_name: formData.get("name") as string,
+    p_dance_card_enabled: formData.get("danceCardEnabled") !== null,
+    p_curtain_call_enabled: formData.get("curtainCallEnabled") !== null,
+    p_grand_finale_enabled: formData.get("grandFinaleEnabled") !== null,
   });
 
   if (error) {

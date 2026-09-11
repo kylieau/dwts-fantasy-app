@@ -72,7 +72,7 @@ const WAIVER_MODE_ITEMS: Record<WaiverMode, string> = {
   waivers: "Waivers enabled",
 };
 
-const MODULE_INFO = [
+export const MODULE_INFO = [
   { name: "Dance Card", description: "Draft Fantasy" },
   { name: "Curtain Call", description: "Weekly Pick 'Em" },
   { name: "Grand Finale", description: "Full-Order Prediction" },
