@@ -19,7 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useBrowserTimeZone, airsAtToUtcIso, utcIsoToLocalInput, formatDeadline } from "@/lib/use-browser-time-zone";
+import {
+  useBrowserTimeZone,
+  useFormattedDeadline,
+  airsAtToUtcIso,
+  utcIsoToLocalInput,
+} from "@/lib/use-browser-time-zone";
 import { explainGrandFinaleMethod } from "@/lib/grand-finale-explainer";
 
 type ScoringMethod = "exact_position" | "distance_based" | "binary_tier";
@@ -151,6 +156,7 @@ export function LeagueModulesForm({
   const [bonusDeadline, setBonusDeadline] = useState(
     scoringSettings?.bonus_picks_deadline ? utcIsoToLocalInput(scoringSettings.bonus_picks_deadline) : ""
   );
+  const formattedBonusDeadline = useFormattedDeadline(bonusDeadline || null);
   const [bonusMethod, setBonusMethod] = useState<ScoringMethod>(
     (scoringSettings?.bonus_picks_scoring_method as ScoringMethod) ?? "exact_position"
   );
@@ -330,7 +336,7 @@ export function LeagueModulesForm({
             <CardContent className="flex flex-col">
               <SettingRow
                 label="Deadline"
-                value={bonusDeadline ? formatDeadline(bonusDeadline) : "—"}
+                value={bonusDeadline ? formattedBonusDeadline : "—"}
               />
               <SettingRow label="Points per correctly-placed couple" value={bonusPicksPointsPerCorrect} />
               <SettingRow label="Scoring method" value={METHOD_ITEMS[bonusMethod]} />

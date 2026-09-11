@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { coupleNameNode } from "@/components/couple-name";
 import type { CoupleNameParts } from "@/lib/couple-display";
-import { formatDeadline } from "@/lib/use-browser-time-zone";
+import { useFormattedDeadline } from "@/lib/use-browser-time-zone";
 
 type Couple = { id: string; celebrity_name: string; pro_name: string; status: string; elimination_week: number | null };
 
@@ -57,6 +57,7 @@ export function GrandFinaleBox({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const formattedDeadline = useFormattedDeadline(deadline);
 
   const coupleById = new Map(couples.map((c) => [c.id, c]));
 
@@ -138,7 +139,7 @@ export function GrandFinaleBox({
           <CardTitle>Grand Finale</CardTitle>
           <CardDescription>
             Tap couples in the order you think they&apos;ll be eliminated — first tap is who goes home first, last is your predicted winner.
-            {deadline ? ` Locks at ${formatDeadline(deadline)}.` : ""}
+            {deadline ? ` Locks at ${formattedDeadline}.` : ""}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -188,7 +189,7 @@ export function GrandFinaleBox({
         <CardTitle>Grand Finale</CardTitle>
         <CardDescription>
           Review your predicted order, first eliminated to season winner. Use the arrows to fine-tune.
-          {deadline ? ` Locks at ${formatDeadline(deadline)}.` : ""}
+          {deadline ? ` Locks at ${formattedDeadline}.` : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDeadline } from "@/lib/use-browser-time-zone";
+import { useFormattedDeadline } from "@/lib/use-browser-time-zone";
 
 export function HomeDashboard({
   standingMessage,
@@ -14,6 +14,8 @@ export function HomeDashboard({
   categoryBreakdown: { label: string; points: number }[];
   nextDeadline: { label: string; iso: string } | null;
 }) {
+  const formattedDeadline = useFormattedDeadline(nextDeadline?.iso);
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -34,9 +36,9 @@ export function HomeDashboard({
           >
             {picksNeeded ? "Picks needed" : "Picks locked in"}
           </span>
-          {nextDeadline && (
+          {nextDeadline && formattedDeadline && (
             <p className="text-sm text-muted-foreground">
-              {nextDeadline.label} locks at {formatDeadline(nextDeadline.iso)}
+              {nextDeadline.label} locks at {formattedDeadline}
             </p>
           )}
         </CardContent>

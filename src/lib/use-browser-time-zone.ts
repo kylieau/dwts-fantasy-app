@@ -29,6 +29,18 @@ export function formatDeadline(iso: string): string {
   }).format(d);
 }
 
+// formatDeadline() defaults to the runtime's own time zone, which differs
+// between the server's SSR pass and the browser — calling it directly during
+// render triggers a hydration mismatch. This mount-gates it the same way
+// useBrowserTimeZone() does, returning "" until the client has settled.
+export function useFormattedDeadline(iso: string | null | undefined): string {
+  const [formatted, setFormatted] = useState("");
+  useEffect(() => {
+    setFormatted(iso ? formatDeadline(iso) : "");
+  }, [iso]);
+  return formatted;
+}
+
 export function airsAtToUtcIso(localValue: string): string | null {
   if (!localValue) return null;
   const date = new Date(localValue);
