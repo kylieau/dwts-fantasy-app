@@ -50,9 +50,9 @@ export default async function WaiversPage({
   if (league.waiver_mode !== "waivers") {
     return (
       <div className="mx-auto flex max-w-md flex-col gap-4 px-4 py-24 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Waivers aren&apos;t enabled</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Recast isn&apos;t enabled</h1>
         <p className="text-sm text-muted-foreground">
-          This league&apos;s roster is locked — the commissioner can enable waivers in
+          This league&apos;s roster is locked — the commissioner can enable Recast in
           league settings.
         </p>
       </div>

@@ -68,8 +68,8 @@ const METHOD_ITEMS: Record<ScoringMethod, string> = {
 };
 
 const WAIVER_MODE_ITEMS: Record<WaiverMode, string> = {
-  locked: "Locked (no waivers)",
-  waivers: "Waivers enabled",
+  locked: "Locked (no Recast)",
+  waivers: "Recast enabled",
 };
 
 export const MODULE_INFO = [
@@ -281,7 +281,7 @@ export function LeagueModulesForm({
 
         <Card>
           <CardHeader>
-            <CardTitle>Set Module Weight</CardTitle>
+            <CardTitle>Scoring Mix</CardTitle>
             <CardDescription>How much each active module counts toward Standings.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col">
@@ -295,7 +295,7 @@ export function LeagueModulesForm({
           <Card>
             <CardHeader>
               <CardTitle>Dance Card</CardTitle>
-              <CardDescription>Draft, roster, waivers, and judges&apos; score points.</CardDescription>
+              <CardDescription>Draft, roster, Recast, and judges&apos; score points.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col">
               <SettingRow label="Draft counts from" value={`Week ${judgesStartsWeek}`} />
@@ -304,9 +304,9 @@ export function LeagueModulesForm({
               <SettingRow label="1st Place Bonus" value={firstPlacePoints} />
               <SettingRow label="2nd Place Bonus" value={secondPlacePoints} />
               <SettingRow label="3rd Place Bonus" value={thirdPlacePoints} />
-              <SettingRow label="Waiver Mode" value={WAIVER_MODE_ITEMS[waiverMode]} />
+              <SettingRow label="Recast Mode" value={WAIVER_MODE_ITEMS[waiverMode]} />
               {waiverMode === "waivers" && (
-                <SettingRow label="Waiver Claim Method" value={WAIVER_CLAIM_METHOD_ITEMS[waiverClaimMethod]} />
+                <SettingRow label="Recast Method" value={WAIVER_CLAIM_METHOD_ITEMS[waiverClaimMethod]} />
               )}
               <SettingRow label="Draft Pick Timer" value={`${pickTimeLimitSeconds}s`} />
             </CardContent>
@@ -400,7 +400,7 @@ export function LeagueModulesForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Set Module Weight</CardTitle>
+          <CardTitle>Scoring Mix</CardTitle>
           <CardDescription>How much each active module counts toward Standings.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -451,7 +451,7 @@ export function LeagueModulesForm({
           <CardHeader>
             <CardTitle>Dance Card</CardTitle>
             <CardDescription>
-              Draft, roster, waivers, and judges&apos; score points. Roster size is set
+              Draft, roster, Recast, and judges&apos; score points. Roster size is set
               automatically when the draft starts (couples ÷ members).
             </CardDescription>
           </CardHeader>
@@ -529,7 +529,7 @@ export function LeagueModulesForm({
             <div className="border-t border-border pt-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="waiverMode">Waiver Mode</Label>
+                  <Label htmlFor="waiverMode">Recast Mode</Label>
                   <Select
                     items={WAIVER_MODE_ITEMS}
                     value={waiverMode}
@@ -539,8 +539,8 @@ export function LeagueModulesForm({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="locked">Locked (no waivers)</SelectItem>
-                      <SelectItem value="waivers">Waivers enabled</SelectItem>
+                      <SelectItem value="locked">Locked (no Recast)</SelectItem>
+                      <SelectItem value="waivers">Recast enabled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -556,7 +556,7 @@ export function LeagueModulesForm({
                 </div>
                 {waiverMode === "waivers" && (
                   <div className="flex flex-col gap-2 sm:col-span-2">
-                    <Label htmlFor="waiverClaimMethod">Waiver Claim Method</Label>
+                    <Label htmlFor="waiverClaimMethod">Recast Method</Label>
                     <Select
                       items={WAIVER_CLAIM_METHOD_ITEMS}
                       value={waiverClaimMethod}

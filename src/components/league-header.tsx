@@ -44,9 +44,6 @@ export function LeagueHeader({
       <div className="flex items-start justify-between gap-4">
         <div>
           <LeagueSwitcher currentLeagueId={leagueId} leagues={switcherLeagues} />
-          <p className="mt-1 text-sm text-muted-foreground">
-            Invite code: <span className="font-mono font-medium text-foreground">{inviteCode}</span>
-          </p>
         </div>
         <div className="flex gap-2">
           {danceCardOn && (
@@ -65,7 +62,7 @@ export function LeagueHeader({
               variant="outline"
               size="sm"
             >
-              Waivers
+              Recast
             </Button>
           )}
           <SheetTrigger render={<Button variant="outline" size="icon-sm" aria-label="League settings" />}>
@@ -101,12 +98,17 @@ export function LeagueHeader({
           <SheetTitle>League Settings</SheetTitle>
           <SheetDescription>
             {canEdit
-              ? "Modules, weights, and per-category rules for this league."
+              ? "Modules, Scoring Mix, and per-category rules for this league."
               : "View-only — only the commissioner can change these."}
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-6 px-4 pb-4">
-          <LeagueInfoSection leagueId={leagueId} leagueName={leagueName} canEdit={canEdit} />
+          <LeagueInfoSection
+            leagueId={leagueId}
+            leagueName={leagueName}
+            inviteCode={inviteCode}
+            canEdit={canEdit}
+          />
           <LeagueModulesForm
             leagueId={leagueId}
             league={league}

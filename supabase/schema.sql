@@ -1355,7 +1355,7 @@ declare
 begin
   select * into v_claim from public.waiver_claims where id = p_claim_id for update;
   if not found then
-    raise exception 'Waiver claim not found';
+    raise exception 'Recast not found';
   end if;
 
   update public.roster_slots
@@ -1422,7 +1422,7 @@ begin
   end if;
 
   if v_league.waiver_mode <> 'waivers' then
-    raise exception 'This league does not use waivers';
+    raise exception 'This league does not use Recast';
   end if;
 
   if not exists (
@@ -1434,7 +1434,7 @@ begin
       and rs.end_week is null
       and c.status in ('eliminated', 'withdrawn')
   ) then
-    raise exception 'That slot is not open for a waiver claim';
+    raise exception 'That slot is not open for a recast';
   end if;
 
   if not exists (
@@ -1484,11 +1484,11 @@ begin
   select * into v_league from public.leagues where id = p_league_id for update;
 
   if not found or v_league.commissioner_id <> auth.uid() then
-    raise exception 'Only the commissioner can process waivers';
+    raise exception 'Only the commissioner can process recasts';
   end if;
 
   if v_league.waiver_claim_method <> 'reverse_standings' then
-    raise exception 'This league does not use reverse-standings waivers';
+    raise exception 'This league does not use reverse-standings recasts';
   end if;
 
   for v_couple_id in
@@ -1532,16 +1532,16 @@ declare
 begin
   select * into v_claim from public.waiver_claims where id = p_claim_id;
   if not found then
-    raise exception 'Waiver claim not found';
+    raise exception 'Recast not found';
   end if;
 
   select * into v_league from public.leagues where id = v_claim.league_id;
   if v_league.commissioner_id <> auth.uid() then
-    raise exception 'Only the commissioner can approve waiver claims';
+    raise exception 'Only the commissioner can approve recasts';
   end if;
 
   if v_claim.status <> 'pending' then
-    raise exception 'This claim has already been resolved';
+    raise exception 'This recast has already been resolved';
   end if;
 
   return public.finalize_waiver_claim(p_claim_id);
@@ -1559,12 +1559,12 @@ declare
 begin
   select * into v_claim from public.waiver_claims where id = p_claim_id;
   if not found then
-    raise exception 'Waiver claim not found';
+    raise exception 'Recast not found';
   end if;
 
   select * into v_league from public.leagues where id = v_claim.league_id;
   if v_league.commissioner_id <> auth.uid() then
-    raise exception 'Only the commissioner can reject waiver claims';
+    raise exception 'Only the commissioner can reject recasts';
   end if;
 
   update public.waiver_claims

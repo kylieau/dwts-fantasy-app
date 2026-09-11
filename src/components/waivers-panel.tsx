@@ -73,7 +73,7 @@ export function WaiversPanel({
     setBusy(true);
     const result = await submitWaiverClaim(leagueId, slotNumber, coupleId);
     if (result.error) setError(result.error);
-    else setMessage("Claim submitted.");
+    else setMessage("Recast submitted.");
     setBusy(false);
   }
 
@@ -83,7 +83,7 @@ export function WaiversPanel({
     setBusy(true);
     const result = await processReverseStandingsWaivers(leagueId);
     if (result.error) setError(result.error);
-    else setMessage("Waivers processed.");
+    else setMessage("Recasts processed.");
     setBusy(false);
   }
 
@@ -106,9 +106,9 @@ export function WaiversPanel({
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-12">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Waivers</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Recast</h1>
         <p className="mt-1 text-sm capitalize text-muted-foreground">
-          {claimMethod.replace("_", " ")} claim method
+          {claimMethod.replace("_", " ")} recast method
         </p>
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         {message && <p className="mt-2 text-sm text-muted-foreground">{message}</p>}
@@ -118,7 +118,7 @@ export function WaiversPanel({
         <Card>
           <CardHeader>
             <CardTitle>Your Open Slots</CardTitle>
-            <CardDescription>Claim a replacement from the available couples.</CardDescription>
+            <CardDescription>Recast a replacement from the available couples.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {openSlots.map((slot) => (
@@ -149,7 +149,7 @@ export function WaiversPanel({
                   disabled={busy || !selections[slot.slotNumber]}
                   onClick={() => handleClaim(slot.slotNumber)}
                 >
-                  Claim
+                  Recast
                 </Button>
               </div>
             ))}
@@ -173,13 +173,13 @@ export function WaiversPanel({
 
       {isCommissioner && claimMethod === "reverse_standings" && (
         <Button onClick={handleProcess} disabled={busy}>
-          Process pending waivers
+          Process pending recasts
         </Button>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Claims</CardTitle>
+          <CardTitle>Recasts</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {claims.map((c) => (

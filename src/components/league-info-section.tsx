@@ -21,10 +21,12 @@ import {
 export function LeagueInfoSection({
   leagueId,
   leagueName,
+  inviteCode,
   canEdit,
 }: {
   leagueId: string;
   leagueName: string;
+  inviteCode: string;
   canEdit: boolean;
 }) {
   const [name, setName] = useState(leagueName);
@@ -69,6 +71,7 @@ export function LeagueInfoSection({
         </CardHeader>
         <CardContent className="flex flex-col">
           <SettingRow label="Name" value={leagueName} />
+          <SettingRow label="Invite code" value={<span className="font-mono">{inviteCode}</span>} />
         </CardContent>
       </Card>
     );
@@ -91,6 +94,8 @@ export function LeagueInfoSection({
             </Button>
           </div>
         </div>
+
+        <SettingRow label="Invite code" value={<span className="font-mono">{inviteCode}</span>} />
 
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <p className="text-sm font-medium text-destructive">Danger zone</p>
