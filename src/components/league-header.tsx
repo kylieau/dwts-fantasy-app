@@ -47,12 +47,21 @@ export function LeagueHeader({
         </div>
         <div className="flex gap-2">
           {danceCardOn && (
-            <Button render={<Link href={`/leagues/${leagueId}/draft`} />} size="sm">
+            <Button
+              render={<Link href={`/leagues/${leagueId}/draft`} />}
+              nativeButton={false}
+              size="sm"
+            >
               Draft room
             </Button>
           )}
           {danceCardOn && waiversOn && (
-            <Button render={<Link href={`/leagues/${leagueId}/waivers`} />} variant="outline" size="sm">
+            <Button
+              render={<Link href={`/leagues/${leagueId}/waivers`} />}
+              nativeButton={false}
+              variant="outline"
+              size="sm"
+            >
               Waivers
             </Button>
           )}

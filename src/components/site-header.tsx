@@ -20,10 +20,10 @@ export async function SiteHeader() {
           Mirrorball Madness
         </Link>
         <div className="flex items-center gap-2">
-          <Button render={<Link href="/login" />} variant="ghost" size="sm">
+          <Button render={<Link href="/login" />} nativeButton={false} variant="ghost" size="sm">
             Sign in
           </Button>
-          <Button render={<Link href="/sign-up" />} size="sm">
+          <Button render={<Link href="/sign-up" />} nativeButton={false} size="sm">
             Sign up
           </Button>
         </div>
