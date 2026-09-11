@@ -364,7 +364,7 @@ export default async function LeaguePage({
               ) : (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Your Roster</CardTitle>
+                    <CardTitle>Your Dance Card Roster</CardTitle>
                     <CardDescription>No roster yet — check the draft room.</CardDescription>
                   </CardHeader>
                 </Card>
@@ -411,7 +411,7 @@ export default async function LeaguePage({
         }
         standings={
           <div className="flex flex-col gap-6">
-            <StandingsTable standings={standings} />
+            <StandingsTable standings={standings} currentUserId={user.id} />
             <Card>
               <CardHeader>
                 <CardTitle>Members</CardTitle>
