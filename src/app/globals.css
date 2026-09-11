@@ -40,6 +40,12 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-curtain: var(--curtain);
+  --color-curtain-light: var(--curtain-light);
+  --color-emerald: var(--emerald);
+  --color-emerald-text: var(--emerald-text);
+  --color-danger-text: var(--danger-text);
+  --font-heading: var(--font-heading);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -47,48 +53,51 @@
 }
 
 @layer base {
-  .theme {
-    --font-heading: var(--font-sans);
-    --font-sans: var(--font-sans);
-  }
   /*
-   * Mirrorball Madness's one and only theme: dark ballroom + gold mirrorball
-   * accent (#D4AF37). There's no light/dark toggle, so this lives directly
-   * in :root rather than behind a .dark class.
+   * Mirrorball Madness's one and only theme: dark curtain + gold mirrorball
+   * accent, per design/mockups.html. There's no light/dark toggle, so this
+   * lives directly in :root rather than behind a .dark class.
    */
   :root {
-    --background: oklch(0.16 0.015 290);
-    --foreground: oklch(0.96 0.01 90);
-    --card: oklch(0.21 0.018 290);
-    --card-foreground: oklch(0.96 0.01 90);
-    --popover: oklch(0.21 0.018 290);
-    --popover-foreground: oklch(0.96 0.01 90);
-    --primary: #d4af37;
-    --primary-foreground: oklch(0.16 0.015 290);
-    --secondary: oklch(0.27 0.02 290);
-    --secondary-foreground: oklch(0.96 0.01 90);
-    --muted: oklch(0.27 0.02 290);
-    --muted-foreground: oklch(0.68 0.03 90);
-    --accent: oklch(0.32 0.06 85);
-    --accent-foreground: oklch(0.96 0.01 90);
-    --destructive: oklch(0.65 0.2 25);
-    --border: oklch(1 0 0 / 12%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: #d4af37;
-    --chart-1: #d4af37;
-    --chart-2: oklch(0.65 0.03 90);
-    --chart-3: oklch(0.5 0.03 90);
-    --chart-4: oklch(0.4 0.05 85);
-    --chart-5: oklch(0.3 0.02 290);
+    --background: #1e1420;
+    --foreground: #f2e8d8;
+    --card: #271a29;
+    --card-foreground: #f2e8d8;
+    --popover: #271a29;
+    --popover-foreground: #f2e8d8;
+    --primary: #c9a24b;
+    --primary-foreground: #2a1c10;
+    --secondary: #332338;
+    --secondary-foreground: #f2e8d8;
+    --muted: #332338;
+    --muted-foreground: #9c8296;
+    --accent: #e4c77a;
+    --accent-foreground: #2a1c10;
+    --destructive: #a9524f;
+    --border: rgba(201, 162, 75, 0.28);
+    --input: rgba(201, 162, 75, 0.28);
+    --ring: #c9a24b;
+    --chart-1: #c9a24b;
+    --chart-2: #e4c77a;
+    --chart-3: #9c8296;
+    --chart-4: #4c7a5a;
+    --chart-5: #a9524f;
     --radius: 0.625rem;
-    --sidebar: oklch(0.13 0.015 290);
-    --sidebar-foreground: oklch(0.96 0.01 90);
-    --sidebar-primary: #d4af37;
-    --sidebar-primary-foreground: oklch(0.16 0.015 290);
-    --sidebar-accent: oklch(0.27 0.02 290);
-    --sidebar-accent-foreground: oklch(0.96 0.01 90);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: #d4af37;
+    --sidebar: #150d18;
+    --sidebar-foreground: #f2e8d8;
+    --sidebar-primary: #c9a24b;
+    --sidebar-primary-foreground: #2a1c10;
+    --sidebar-accent: #332338;
+    --sidebar-accent-foreground: #f2e8d8;
+    --sidebar-border: rgba(201, 162, 75, 0.28);
+    --sidebar-ring: #c9a24b;
+
+    /* Mockup-specific tokens with no existing semantic counterpart. */
+    --curtain: #5c1a2e;
+    --curtain-light: #7c2a45;
+    --emerald: #4c7a5a;
+    --emerald-text: #9fcbac;
+    --danger-text: #e7aba8;
   }
   * {
     @apply border-border outline-ring/50;
