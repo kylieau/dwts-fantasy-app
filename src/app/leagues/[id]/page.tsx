@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -308,12 +307,94 @@ export default async function LeaguePage({
       status: r.couples!.status,
     }));
 
+  const { data: myMemberships } = await supabase
+    .from("league_members")
+    .select("leagues(id, name)")
+    .eq("user_id", user.id);
+
+  const otherSwitcherLeagues = await Promise.all(
+    (myMemberships ?? [])
+      .map((m) => m.leagues!)
+      .filter((l) => l.id !== id)
+      .map(async (otherLeague) => {
+        const [{ data: otherScoringSettings }, { data: otherMembers }, { data: otherScores }] = await Promise.all([
+          supabase
+            .from("scoring_settings")
+            .select("eliminations_category_enabled, bonus_picks_category_enabled, bonus_picks_deadline")
+            .eq("league_id", otherLeague.id)
+            .single(),
+          supabase.from("league_members").select("user_id").eq("league_id", otherLeague.id),
+          supabase.from("weekly_manager_scores").select("manager_id, total_points").eq("league_id", otherLeague.id),
+        ]);
+
+        const otherPointsByManager = new Map<string, number>();
+        for (const row of otherScores ?? []) {
+          otherPointsByManager.set(
+            row.manager_id,
+            (otherPointsByManager.get(row.manager_id) ?? 0) + row.total_points
+          );
+        }
+        const otherStandings = (otherMembers ?? []).map((m) => ({
+          managerId: m.user_id,
+          points: otherPointsByManager.get(m.user_id) ?? 0,
+        }));
+        const otherRank = Math.max(
+          1,
+          [...otherStandings].sort((a, b) => b.points - a.points).findIndex((s) => s.managerId === user.id) + 1
+        );
+
+        const otherCurtainCallOn = otherScoringSettings?.eliminations_category_enabled ?? true;
+        const otherGrandFinaleOn = otherScoringSettings?.bonus_picks_category_enabled ?? false;
+        const otherGrandFinaleDeadline = otherScoringSettings?.bonus_picks_deadline ?? null;
+        const otherGrandFinaleLocked =
+          !!otherGrandFinaleDeadline && new Date() >= new Date(otherGrandFinaleDeadline);
+
+        let otherPicksDue = false;
+        if (otherCurtainCallOn && upcomingEpisode) {
+          const { data: otherLockAt } = await supabase.rpc("prediction_lock_at", {
+            p_league_id: otherLeague.id,
+            p_episode_id: upcomingEpisode.id,
+          });
+          const otherIsLocked = !!otherLockAt && new Date() >= new Date(otherLockAt);
+          if (!otherIsLocked) {
+            const { data: otherPrediction } = await supabase
+              .from("predictions")
+              .select("manager_id")
+              .eq("league_id", otherLeague.id)
+              .eq("episode_id", upcomingEpisode.id)
+              .eq("manager_id", user.id)
+              .maybeSingle();
+            otherPicksDue = !otherPrediction;
+          }
+        }
+        if (!otherPicksDue && otherGrandFinaleOn && !otherGrandFinaleLocked) {
+          const { data: otherGrandFinalePick } = await supabase
+            .from("grand_finale_predictions")
+            .select("manager_id")
+            .eq("league_id", otherLeague.id)
+            .eq("manager_id", user.id)
+            .limit(1)
+            .maybeSingle();
+          otherPicksDue = !otherGrandFinalePick;
+        }
+
+        return {
+          id: otherLeague.id,
+          name: otherLeague.name,
+          rank: otherRank,
+          totalMembers: otherStandings.length,
+          picksDue: otherPicksDue,
+        };
+      })
+  );
+
+  const switcherLeagues = [
+    { id, name: league.name, rank, totalMembers: standings.length, picksDue: picksNeeded },
+    ...otherSwitcherLeagues,
+  ];
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
-      <Link href="/leagues" className="text-sm text-muted-foreground hover:text-foreground">
-        ‹ Leagues
-      </Link>
-
       {error && <p className="text-sm text-destructive">{error}</p>}
       {message && <p className="text-sm text-muted-foreground">{message}</p>}
 
@@ -329,6 +410,7 @@ export default async function LeaguePage({
         premiereAirsAt={premiereEpisode?.airs_at ?? null}
         justCreated={justCreated === "1"}
         scoringConfigured={scoringSettings?.scoring_configured ?? true}
+        switcherLeagues={switcherLeagues}
       />
 
       <LeagueTabs

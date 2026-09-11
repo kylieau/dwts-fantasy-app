@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { LeagueModulesForm } from "@/components/league-modules-form";
 import { LeagueInfoSection } from "@/components/league-info-section";
+import { LeagueSwitcher, type SwitcherLeague } from "@/components/league-switcher";
 
 export function LeagueHeader({
   leagueId,
@@ -28,6 +29,7 @@ export function LeagueHeader({
   premiereAirsAt,
   justCreated,
   scoringConfigured,
+  switcherLeagues,
 }: ComponentProps<typeof LeagueModulesForm> & {
   leagueName: string;
   inviteCode: string;
@@ -35,12 +37,13 @@ export function LeagueHeader({
   waiversOn: boolean;
   justCreated: boolean;
   scoringConfigured: boolean;
+  switcherLeagues: SwitcherLeague[];
 }) {
   return (
     <Sheet>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{leagueName}</h1>
+          <LeagueSwitcher currentLeagueId={leagueId} leagues={switcherLeagues} />
           <p className="mt-1 text-sm text-muted-foreground">
             Invite code: <span className="font-mono font-medium text-foreground">{inviteCode}</span>
           </p>
