@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronDownIcon, CheckIcon } from "lucide-react";
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { CreateJoinLeagueDialogs } from "@/components/create-join-league-dialogs";
 import { cn } from "cn";
 
 export type SwitcherLeague = {
@@ -68,12 +69,9 @@ export function LeagueSwitcher({
             );
           })}
         </div>
-        <Link
-          href="/leagues"
-          className="block border-t border-border px-4 py-3 text-center text-sm font-semibold text-accent"
-        >
-          + Join or create a league
-        </Link>
+        <div className="border-t border-border px-4 py-3">
+          <CreateJoinLeagueDialogs />
+        </div>
       </SheetContent>
     </Sheet>
   );
