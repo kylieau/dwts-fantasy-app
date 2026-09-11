@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirrorball Madness — Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E1420;
+    --ink-deep:#150D18;
+    --panel:#271A29;
+    --curtain:#5C1A2E;
+    --curtain-light:#7C2A45;
+    --gold:#C9A24B;
+    --gold-soft:#E4C77A;
+    --gold-line:rgba(201,162,75,.28);
+    --ivory:#F2E8D8;
+    --mauve:#9C8296;
+    --emerald:#4C7A5A;
+    --emerald-text:#9FCBAC;
+    --danger:#A9524F;
+    --danger-text:#E7ABA8;
+    --font-display:'Fraunces', serif;
+    --font-body:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:#0E0710;
+    background-image:radial-gradient(circle at 20% 10%, #241531 0%, #0E0710 55%);
+    font-family:var(--font-body);
+    color:var(--ivory);
+    padding:56px 40px 100px;
+  }
+  .intro{max-width:820px;margin:0 auto 64px;}
+  .kicker{font-family:var(--font-display);font-size:15px;color:var(--gold-soft);margin:0 0 10px;font-style:italic;}
+  .intro h1{font-family:var(--font-display);font-weight:600;font-size:44px;line-height:1.1;margin:0 0 18px;}
+  .intro p{font-size:16px;line-height:1.65;color:#CDBEC9;max-width:640px;margin:0 0 8px;}
+  .group{max-width:1400px;margin:0 auto 80px;}
+  .group-head{display:flex;align-items:baseline;gap:16px;margin-bottom:28px;border-bottom:1px solid var(--gold-line);padding-bottom:14px;}
+  .group-head h2{font-family:var(--font-display);font-weight:600;font-size:24px;margin:0;color:var(--ivory);}
+  .group-head span{font-size:13px;color:var(--mauve);}
+  .phones{display:flex;flex-wrap:wrap;gap:44px;}
+  figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:16px;}
+  figcaption{font-family:var(--font-display);font-size:15px;color:var(--gold-soft);text-align:center;}
+  figcaption small{display:block;font-family:var(--font-body);font-size:12px;color:var(--mauve);margin-top:2px;font-weight:400;}
+
+  .phone{
+    width:300px;height:650px;
+    background:var(--ink);
+    border:8px solid #0A0510;
+    border-radius:42px;
+    box-shadow:0 30px 70px rgba(0,0,0,.55), inset 0 0 0 1px rgba(201,162,75,.12);
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .statusbar{display:flex;justify-content:space-between;padding:14px 22px 2px;font-size:11px;color:var(--mauve);font-weight:500;}
+  .screen{flex:1;overflow-y:auto;padding:6px 18px 14px;scrollbar-width:none;}
+  .screen::-webkit-scrollbar{display:none;}
+
+  .eyebrow{font-size:12px;color:var(--mauve);margin:0 0 4px;}
+  .marquee{font-family:var(--font-display);font-weight:600;font-size:26px;line-height:1.15;margin:0 0 4px;position:relative;}
+  .marquee-rule{width:36px;height:2px;background:var(--gold);margin:10px 0 16px;border-radius:2px;}
+  .sub{font-size:13px;color:var(--mauve);margin:0 0 16px;}
+
+  .card{background:var(--panel);border:1px solid var(--gold-line);border-radius:16px;padding:14px 16px;margin-bottom:12px;}
+  .card h3{font-size:14px;font-weight:600;margin:0 0 4px;color:var(--ivory);}
+  .card p{font-size:12px;color:var(--mauve);margin:0;}
+
+  .stub{
+    background:linear-gradient(135deg,var(--curtain),var(--curtain-light));
+    border-radius:14px;padding:16px 20px;margin-bottom:16px;
+    position:relative;border:1px solid rgba(201,162,75,.4);
+  }
+  .stub::before,.stub::after{content:"";position:absolute;width:14px;height:14px;background:var(--ink);border-radius:50%;top:50%;transform:translateY(-50%);}
+  .stub::before{left:-7px;}
+  .stub::after{right:-7px;}
+  .stub .label{font-size:11px;color:var(--gold-soft);margin:0 0 4px;}
+  .stub .big{font-family:var(--font-display);font-size:20px;font-weight:600;margin:0 0 8px;}
+  .stub .cta{display:inline-block;background:var(--gold);color:#2A1C10;font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;}
+
+  .row-between{display:flex;justify-content:space-between;align-items:center;}
+  .badge{font-size:10px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .badge-due{background:rgba(201,162,75,.18);color:var(--gold-soft);}
+  .badge-in{background:rgba(76,122,90,.22);color:var(--emerald-text);}
+  .badge-none{background:rgba(156,130,150,.15);color:var(--mauve);}
+
+  .modrow{display:flex;gap:6px;margin-top:8px;}
+  .mod{font-size:14px;opacity:.35;}
+  .mod.on{opacity:1;}
+
+  .activity{font-size:12.5px;color:#CDBEC9;padding:9px 0;border-top:1px solid rgba(201,162,75,.12);}
+  .activity:first-of-type{border-top:none;}
+  .activity b{color:var(--ivory);font-weight:600;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:11px;color:var(--mauve);margin-bottom:6px;}
+  .field input{
+    width:100%;background:var(--panel);border:1px solid var(--gold-line);border-radius:10px;
+    padding:11px 12px;color:var(--ivory);font-size:13px;font-family:var(--font-body);
+  }
+  .field input::placeholder{color:#6E5E6B;}
+  .joinrow{display:flex;gap:8px;margin-bottom:20px;}
+  .joinrow input{flex:1;}
+  .btn-gold{background:var(--gold);color:#2A1C10;border:none;border-radius:10px;padding:0 16px;font-size:12.5px;font-weight:700;}
+  .btn-gold-full{display:block;width:100%;text-align:center;background:var(--gold);color:#2A1C10;border-radius:12px;padding:13px;font-size:14px;font-weight:700;margin-top:6px;}
+  .btn-ghost-full{display:block;width:100%;text-align:center;background:transparent;color:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px;font-size:13px;font-weight:600;margin-top:10px;}
+
+  .modcard{background:var(--panel);border:1px solid var(--gold-line);border-radius:16px;padding:14px 16px;margin-bottom:12px;}
+  .modcard.off{opacity:.45;}
+  .modcard .top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .modcard .icon{font-size:18px;margin-right:8px;}
+  .modcard h3{font-size:14.5px;font-weight:600;margin:0 0 4px;}
+  .modcard p{font-size:12px;color:var(--mauve);margin:0 0 10px;max-width:200px;}
+  .toggle{width:38px;height:22px;border-radius:20px;background:var(--gold);position:relative;flex-shrink:0;}
+  .toggle::after{content:"";position:absolute;width:16px;height:16px;background:#2A1C10;border-radius:50%;top:3px;right:3px;}
+  .toggle.off{background:#3E3040;}
+  .toggle.off::after{left:3px;right:auto;background:#8A7A87;}
+  .weight{display:inline-block;font-size:11px;background:rgba(201,162,75,.15);color:var(--gold-soft);padding:4px 10px;border-radius:20px;}
+
+  .rankrow{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+  .paddle{
+    width:58px;height:58px;border-radius:50%;flex-shrink:0;
+    background:radial-gradient(circle at 32% 30%, var(--gold-soft), var(--gold));
+    color:#2A1C10;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:19px;
+    box-shadow:0 6px 14px rgba(0,0,0,.4);
+  }
+  .rankrow .rankmeta{font-size:12.5px;color:var(--mauve);}
+  .rankrow .rankmeta b{display:block;color:var(--ivory);font-size:15px;font-weight:600;margin-bottom:2px;}
+
+  .statgrid{display:flex;gap:8px;margin-bottom:16px;}
+  .stat{flex:1;background:var(--panel);border:1px solid var(--gold-line);border-radius:12px;padding:10px 8px;text-align:center;}
+  .stat .n{font-family:var(--font-display);font-size:17px;font-weight:600;}
+  .stat .l{font-size:9.5px;color:var(--mauve);margin-top:2px;}
+
+  .qcard{background:var(--panel);border:1px solid var(--gold-line);border-radius:16px;padding:14px 16px;margin-bottom:12px;}
+  .qcard h3{font-size:13.5px;font-weight:600;margin:0 0 10px;}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;}
+  .chip{font-size:11.5px;padding:7px 11px;border-radius:20px;border:1px solid var(--gold-line);color:#CDBEC9;}
+  .chip.sel{background:var(--gold);color:#2A1C10;border-color:var(--gold);font-weight:600;}
+
+  .seal{
+    display:flex;align-items:center;gap:8px;background:rgba(76,122,90,.15);
+    border:1px solid rgba(76,122,90,.4);border-radius:12px;padding:10px 12px;margin:4px 0 16px;
+    font-size:12px;color:var(--emerald-text);font-weight:600;
+  }
+  .seal .dot{width:18px;height:18px;border-radius:50%;background:var(--emerald);color:#0E1B12;display:flex;align-items:center;justify-content:center;font-size:11px;}
+
+  .acc-row{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+  .acc-dots{display:flex;gap:6px;}
+  .acc-dot{width:12px;height:12px;border-radius:50%;}
+  .acc-dot.hit{background:var(--gold);}
+  .acc-dot.miss{background:transparent;border:1.5px solid var(--mauve);}
+
+  .couple{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid var(--gold-line);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
+  .couple.out{opacity:.5;}
+  .couple .names{font-size:13px;font-weight:600;}
+  .couple .names span{display:block;font-size:11px;color:var(--mauve);font-weight:400;margin-top:2px;}
+  .couple .pts{text-align:right;font-size:12px;}
+  .couple .pts b{display:block;font-family:var(--font-display);font-size:15px;font-weight:600;}
+  .tag{display:inline-block;font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:20px;margin-bottom:5px;}
+  .tag-safe{background:rgba(76,122,90,.22);color:var(--emerald-text);}
+  .tag-bottom{background:rgba(169,82,79,.22);color:var(--danger-text);}
+  .tag-out{background:rgba(156,130,150,.15);color:var(--mauve);}
+
+  .section-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--gold-soft);margin:18px 0 10px;padding-top:14px;border-top:1px solid rgba(201,162,75,.15);}
+  .section-label:first-of-type{margin-top:0;padding-top:0;border-top:none;}
+  .couple.compact{padding:9px 12px;}
+  .more-line{font-size:11.5px;color:var(--mauve);text-align:center;padding:4px 0 2px;}
+
+  .envelope{
+    background:linear-gradient(180deg, var(--curtain), var(--curtain-light));
+    border:1px solid rgba(201,162,75,.4);border-radius:16px;padding:18px;margin-bottom:16px;text-align:center;
+  }
+  .envelope .l{font-size:10.5px;color:var(--gold-soft);letter-spacing:.3px;margin-bottom:8px;}
+  .envelope .n{font-family:var(--font-display);font-size:17px;font-weight:600;line-height:1.3;}
+
+  .lead-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12.5px;border-top:1px solid rgba(201,162,75,.12);}
+  .lead-row:first-of-type{border-top:none;}
+  .lead-row .n{font-family:var(--font-display);font-weight:600;color:var(--gold-soft);width:18px;}
+
+  .stand-row{display:flex;align-items:center;gap:12px;padding:11px 4px;border-top:1px solid rgba(201,162,75,.12);}
+  .stand-row:first-of-type{border-top:none;}
+  .stand-row.you{background:rgba(201,162,75,.08);border-left:2px solid var(--gold);border-radius:8px;padding-left:10px;margin-left:-2px;}
+  .stand-row .pos{font-family:var(--font-display);font-weight:600;font-size:14px;width:20px;color:var(--mauve);}
+  .stand-row.you .pos{color:var(--gold-soft);}
+  .stand-row .who{flex:1;font-size:13px;font-weight:600;}
+  .stand-row .who span{display:block;font-size:10.5px;color:var(--mauve);font-weight:400;}
+  .stand-row .pts{font-size:13px;font-weight:600;}
+  .change{font-size:10px;margin-left:6px;}
+  .up{color:var(--emerald-text);}
+  .down{color:var(--danger-text);}
+
+  .tabbar{display:flex;justify-content:space-around;align-items:center;padding:9px 4px 18px;border-top:1px solid var(--gold-line);background:var(--ink-deep);}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;color:var(--mauve);font-weight:500;}
+  .tab.active{color:var(--gold-soft);}
+  .tab svg{width:19px;height:19px;}
+
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .switcher{display:flex;align-items:center;gap:6px;font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--ivory);}
+  .switcher .chev{font-size:11px;color:var(--gold-soft);}
+  .topbar-icons{display:flex;align-items:center;gap:8px;}
+  .icon-btn{width:30px;height:30px;border-radius:50%;background:var(--panel);border:1px solid var(--gold-line);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--gold-soft);flex-shrink:0;}
+  .icon-btn.avatar{background:var(--gold);color:#2A1C10;font-family:var(--font-display);font-weight:700;border:none;}
+
+  .backnav{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--gold-soft);font-weight:600;margin-bottom:14px;}
+
+  .sheet-backdrop{position:absolute;inset:40px 0 0 0;background:rgba(10,5,15,.72);z-index:5;}
+  .sheet{position:absolute;top:40px;left:0;right:0;background:var(--ink-deep);border-bottom:1px solid var(--gold-line);border-radius:0 0 24px 24px;padding:18px 18px 20px;z-index:6;box-shadow:0 24px 44px rgba(0,0,0,.5);}
+  .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .sheet-head h3{font-family:var(--font-display);font-size:16px;font-weight:600;margin:0;}
+  .sheet-close{width:24px;height:24px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--mauve);}
+  .sheet-row{display:flex;justify-content:space-between;align-items:center;padding:10px 2px;border-top:1px solid rgba(201,162,75,.12);}
+  .sheet-row:first-of-type{border-top:none;}
+  .sheet-row h4{font-size:13px;font-weight:600;margin:0;color:var(--ivory);}
+  .sheet-row.current h4{color:var(--gold-soft);}
+  .sheet-row .meta{font-size:11px;color:var(--mauve);margin-top:2px;}
+  .sheet-cta{display:block;text-align:center;margin-top:10px;padding-top:12px;border-top:1px solid rgba(201,162,75,.12);font-size:12.5px;color:var(--gold-soft);font-weight:600;}
+
+  .settingsrow{display:flex;justify-content:space-between;align-items:center;padding:13px 2px;border-top:1px solid rgba(201,162,75,.12);font-size:13.5px;font-weight:500;}
+  .settingsrow:first-of-type{border-top:none;}
+  .settingsrow .chev{color:var(--mauve);font-size:13px;}
+  .settings-caption{font-size:11px;color:var(--mauve);margin-top:10px;line-height:1.5;}
+
+  .code-card{background:var(--panel);border:1px solid var(--gold-line);border-radius:14px;padding:14px 16px;margin-bottom:14px;text-align:center;}
+  .code-card .code{font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:2px;color:var(--gold-soft);margin:4px 0 8px;}
+  .code-card .copy{display:inline-block;font-size:11px;font-weight:600;color:#2A1C10;background:var(--gold);padding:6px 14px;border-radius:20px;}
+
+  .rule-row{display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-top:1px solid rgba(201,162,75,.1);color:#CDBEC9;}
+  .rule-row:first-of-type{border-top:none;}
+  .rule-row b{color:var(--ivory);font-weight:600;}
+
+  .member-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:8px 0;border-top:1px solid rgba(201,162,75,.1);}
+  .member-row:first-of-type{border-top:none;}
+
+  .pick3{display:flex;gap:6px;}
+  .pick3 .opt{flex:1;text-align:center;font-size:10.5px;font-weight:600;padding:7px 4px;border-radius:8px;border:1px solid var(--gold-line);color:var(--mauve);}
+  .pick3 .opt.sel{background:var(--gold);color:#2A1C10;border-color:var(--gold);}
+  .pick3 .opt.sel.bottom-sel{background:var(--danger);color:#2A150F;border-color:var(--danger);}
+  .pick3 .opt.sel.out-sel{background:#5C5060;color:var(--ivory);border-color:#5C5060;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <p class="kicker">Mirrorball Madness — screen concepts, v3</p>
+  <h1>Chrome that only shows up when it's earned</h1>
+  <p>Thirteen screens. The four in-league tabs (Home, Your picks, This week, Standings) never change — they're the only permanent navigation. Cross-league browsing lives behind a switcher you open from Home, not a competing tab, and only matters once someone's in more than one league. Zero-league, one-league and multi-league starts are shown separately, along with where account, league and admin settings each live.</p>
+</div>
+
+<div class="group">
+  <div class="group-head"><h2>Getting into a league</h2><span>Zero-league start · browse and join · commissioner setup</span></div>
+  <div class="phones">
+
+    <!-- ZERO STATE -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <p class="eyebrow">Season 34 is live</p>
+          <h1 class="marquee">Let's get you<br>in a league</h1>
+          <div class="marquee-rule"></div>
+          <p class="sub" style="margin-bottom:18px;">Join with a friend's code, or start your own.</p>
+
+          <div class="joinrow">
+            <input type="text" placeholder="Enter invite code">
+            <button class="btn-gold">Join</button>
+          </div>
+
+          <p style="text-align:center;font-size:11px;color:var(--mauve);margin:6px 0 14px;">or</p>
+
+          <div class="btn-gold-full">Create a league</div>
+        </div>
+      </div>
+      <figcaption>No leagues yet<small>zero-state, no tabs to show</small></figcaption>
+    </figure>
+
+    <!-- LEAGUES -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="backnav">‹ Back</div>
+          <h1 class="marquee">Leagues</h1>
+          <div class="marquee-rule"></div>
+
+          <div class="joinrow">
+            <input type="text" placeholder="Enter invite code">
+            <button class="btn-gold">Join</button>
+          </div>
+
+          <p class="sub" style="margin-bottom:8px;color:var(--ivory);font-weight:600;">Your leagues</p>
+          <div class="card">
+            <h3>Girls Night In</h3>
+            <p>10 members, season 34</p>
+            <div class="modrow"><span class="mod on">🪩</span><span class="mod on">🔮</span><span class="mod">🏆</span></div>
+          </div>
+          <div class="card">
+            <h3>Office Pool</h3>
+            <p>14 members, season 34</p>
+            <div class="modrow"><span class="mod on">🪩</span><span class="mod on">🔮</span><span class="mod on">🏆</span></div>
+          </div>
+          <div class="card">
+            <h3>Family Feud</h3>
+            <p>8 members, season 34</p>
+            <div class="modrow"><span class="mod">🪩</span><span class="mod on">🔮</span><span class="mod on">🏆</span></div>
+          </div>
+
+          <div class="btn-gold-full">Create a league</div>
+        </div>
+      </div>
+      <figcaption>Leagues<small>browse, join, manage — no longer a tab</small></figcaption>
+    </figure>
+
+    <!-- CREATE LEAGUE -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="backnav">‹ Leagues</div>
+          <h1 class="marquee">New league</h1>
+          <div class="marquee-rule"></div>
+
+          <div class="field">
+            <label>League name</label>
+            <input type="text" placeholder="e.g. Girls Night In">
+          </div>
+
+          <p class="sub" style="margin-bottom:8px;color:var(--ivory);font-weight:600;">Scoring modules</p>
+
+          <div class="modcard">
+            <div class="top">
+              <div><span class="icon">🪩</span><h3 style="display:inline;">Dance Card</h3><p>Draft couples, score points as they dance.</p></div>
+              <div class="toggle"></div>
+            </div>
+            <span class="weight">Weight ×1.0</span>
+          </div>
+
+          <div class="modcard">
+            <div class="top">
+              <div><span class="icon">🔮</span><h3 style="display:inline;">Curtain Call</h3><p>Weekly picks on who's safe and who's out.</p></div>
+              <div class="toggle"></div>
+            </div>
+            <span class="weight">Weight ×1.5</span>
+          </div>
+
+          <div class="modcard off">
+            <div class="top">
+              <div><span class="icon">🏆</span><h3 style="display:inline;">Grand Finale</h3><p>Call the season's full elimination order.</p></div>
+              <div class="toggle off"></div>
+            </div>
+          </div>
+
+          <div class="btn-gold-full">Create league</div>
+        </div>
+      </div>
+      <figcaption>Create a league<small>commissioner scoring setup</small></figcaption>
+    </figure>
+
+  </div>
+</div>
+
+<div class="group">
+  <div class="group-head"><h2>Inside a league</h2><span>Home · Your picks · This week · Standings — same four tabs no matter which modules are on</span></div>
+  <div class="phones">
+
+    <!-- LEAGUE HOME -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="topbar">
+            <div class="switcher">Office Pool <span class="chev">⌄</span></div>
+            <div class="topbar-icons">
+              <div class="icon-btn" title="League settings">⚙</div>
+              <div class="icon-btn avatar">K</div>
+            </div>
+          </div>
+          <h1 class="marquee">Week 6</h1>
+          <div class="marquee-rule"></div>
+
+          <div class="rankrow">
+            <div class="paddle">1st</div>
+            <div class="rankmeta"><b>312 pts</b>of 14 players</div>
+          </div>
+
+          <div class="statgrid">
+            <div class="stat"><div class="n">128</div><div class="l">🪩 dance card</div></div>
+            <div class="stat"><div class="n">146</div><div class="l">🔮 curtain call</div></div>
+            <div class="stat"><div class="n">38</div><div class="l">🏆 grand finale</div></div>
+          </div>
+
+          <div class="stub">
+            <p class="label">Curtain Call</p>
+            <p class="big">Picks close in 4h 12m</p>
+            <span class="cta">Make picks</span>
+          </div>
+
+          <div class="card">
+            <h3>Best week yet</h3>
+            <p>You scored 41 pts last week, your season high.</p>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab active">⌂<span>Home</span></div>
+          <div class="tab">✎<span>Your picks</span></div>
+          <div class="tab">◷<span>This week</span></div>
+          <div class="tab">⌤<span>Standings</span></div>
+        </div>
+      </div>
+      <figcaption>League home<small>rank and status, any config</small></figcaption>
+    </figure>
+
+    <!-- YOUR PICKS: CURTAIN CALL ONLY -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="topbar">
+            <div class="switcher">Book Club Bracket <span class="chev">⌄</span></div>
+            <div class="topbar-icons">
+              <div class="icon-btn" title="League settings">⚙</div>
+              <div class="icon-btn avatar">K</div>
+            </div>
+          </div>
+          <h1 class="marquee">Your picks</h1>
+          <p class="sub">Curtain Call only, locks Thursday 5:00pm PT</p>
+
+          <div class="seal"><span class="dot">✓</span>Locked in — good luck this week</div>
+
+          <div class="qcard">
+            <h3>Who's safe this week?</h3>
+            <div class="chips">
+              <span class="chip sel">Jordan & Marco</span>
+              <span class="chip sel">Priya & Theo</span>
+              <span class="chip">Wes & Ines</span>
+              <span class="chip">Dana & Kofi</span>
+            </div>
+          </div>
+          <div class="qcard">
+            <h3>Who's in the bottom two?</h3>
+            <div class="chips">
+              <span class="chip">Jordan & Marco</span>
+              <span class="chip sel">Wes & Ines</span>
+              <span class="chip sel">Dana & Kofi</span>
+            </div>
+          </div>
+          <div class="qcard">
+            <h3>Who goes home?</h3>
+            <div class="chips">
+              <span class="chip">Dana & Kofi</span>
+              <span class="chip sel">Wes & Ines</span>
+            </div>
+          </div>
+
+          <p class="sub" style="margin:14px 0 0;color:var(--ivory);font-weight:600;">Your accuracy</p>
+          <div class="acc-row">
+            <div class="acc-dots">
+              <div class="acc-dot hit"></div><div class="acc-dot hit"></div><div class="acc-dot miss"></div>
+              <div class="acc-dot hit"></div><div class="acc-dot hit"></div>
+            </div>
+            <span style="font-size:11px;color:var(--mauve);">4 of 5 weeks</span>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab">⌂<span>Home</span></div>
+          <div class="tab active">✎<span>Your picks</span></div>
+          <div class="tab">◷<span>This week</span></div>
+          <div class="tab">⌤<span>Standings</span></div>
+        </div>
+      </div>
+      <figcaption>Your picks — config A<small>only Curtain Call is on</small></figcaption>
+    </figure>
+
+    <!-- YOUR PICKS: DANCE CARD ONLY -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="topbar">
+            <div class="switcher">Studio 8 Draft <span class="chev">⌄</span></div>
+            <div class="topbar-icons">
+              <div class="icon-btn" title="League settings">⚙</div>
+              <div class="icon-btn avatar">K</div>
+            </div>
+          </div>
+          <h1 class="marquee">Your picks</h1>
+          <p class="sub">Dance Card only, roster locked for the season</p>
+
+          <div class="couple">
+            <div>
+              <span class="tag tag-safe">Safe</span>
+              <div class="names">Jordan Ellis & Marco Diaz</div>
+            </div>
+            <div class="pts"><b>+18</b>this wk<br>96 season</div>
+          </div>
+          <div class="couple">
+            <div>
+              <span class="tag tag-bottom">Bottom two</span>
+              <div class="names">Priya Nandan & Theo Brandt</div>
+            </div>
+            <div class="pts"><b>+9</b>this wk<br>71 season</div>
+          </div>
+          <div class="couple out">
+            <div>
+              <span class="tag tag-out">Eliminated</span>
+              <div class="names">Wes Calloway & Ines Farro</div>
+            </div>
+            <div class="pts"><b>0</b>this wk<br>54 season</div>
+          </div>
+
+          <div class="card">
+            <h3>Roster locked for the season</h3>
+            <p>Dance Card couples were drafted at season start and can't be swapped.</p>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab">⌂<span>Home</span></div>
+          <div class="tab active">✎<span>Your picks</span></div>
+          <div class="tab">◷<span>This week</span></div>
+          <div class="tab">⌤<span>Standings</span></div>
+        </div>
+      </div>
+      <figcaption>Your picks — config B<small>only Dance Card is on</small></figcaption>
+    </figure>
+
+    <!-- YOUR PICKS: ALL THREE -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="topbar">
+            <div class="switcher">Office Pool <span class="chev">⌄</span></div>
+            <div class="topbar-icons">
+              <div class="icon-btn" title="League settings">⚙</div>
+              <div class="icon-btn avatar">K</div>
+            </div>
+          </div>
+          <h1 class="marquee">Your picks</h1>
+
+          <div class="stub">
+            <p class="label">Curtain Call</p>
+            <p class="big">Picks close in 4h 12m</p>
+            <span class="cta">Make picks</span>
+          </div>
+
+          <div class="section-label">🔮 This week's picks</div>
+          <div class="qcard">
+            <h3>Who's safe this week?</h3>
+            <div class="chips">
+              <span class="chip sel">Jordan & Marco</span>
+              <span class="chip sel">Priya & Theo</span>
+              <span class="chip">Wes & Ines</span>
+            </div>
+          </div>
+
+          <div class="section-label">🪩 Your roster</div>
+          <div class="couple compact">
+            <div><span class="tag tag-safe">Safe</span><div class="names">Jordan Ellis & Marco Diaz</div></div>
+            <div class="pts"><b>+18</b>this wk</div>
+          </div>
+          <div class="couple compact">
+            <div><span class="tag tag-bottom">Bottom two</span><div class="names">Priya Nandan & Theo Brandt</div></div>
+            <div class="pts"><b>+9</b>this wk</div>
+          </div>
+          <p class="more-line">+2 more couples in your draft</p>
+
+          <div class="section-label">🏆 Grand Finale</div>
+          <div class="card">
+            <div class="row-between">
+              <h3 style="margin:0;">Your predicted winner</h3>
+              <span class="badge badge-in">Locked</span>
+            </div>
+            <p style="margin-top:6px;">Jordan & Marco to take the mirrorball. Submitted before week 1, can't be edited.</p>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab">⌂<span>Home</span></div>
+          <div class="tab active">✎<span>Your picks</span></div>
+          <div class="tab">◷<span>This week</span></div>
+          <div class="tab">⌤<span>Standings</span></div>
+        </div>
+      </div>
+      <figcaption>Your picks — config C<small>all three modules on</small></figcaption>
+    </figure>
+
+    <!-- THIS WEEK -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="topbar">
+            <div class="switcher">Office Pool <span class="chev">⌄</span></div>
+            <div class="topbar-icons">
+              <div class="icon-btn" title="League settings">⚙</div>
+              <div class="icon-btn avatar">K</div>
+            </div>
+          </div>
+          <h1 class="marquee">This week</h1>
+          <p class="sub">Week 6, the actual results</p>
+
+          <div class="envelope">
+            <p class="l">Eliminated this week</p>
+            <p class="n">Wes Calloway<br>&amp; Ines Farro</p>
+          </div>
+
+          <div class="couple">
+            <div><span class="tag tag-safe">Safe</span><div class="names">Jordan Ellis & Marco Diaz</div></div>
+          </div>
+          <div class="couple">
+            <div><span class="tag tag-bottom">Bottom two</span><div class="names">Priya Nandan & Theo Brandt</div></div>
+          </div>
+          <div class="couple">
+            <div><span class="tag tag-bottom">Bottom two</span><div class="names">Dana Kim & Kofi Adeyemi</div></div>
+          </div>
+
+          <p class="sub" style="margin:14px 0 4px;color:var(--ivory);font-weight:600;">Top scorers this week</p>
+          <div class="lead-row"><span class="n">1</span><span style="flex:1;">Priya</span><span>+41</span></div>
+          <div class="lead-row"><span class="n">2</span><span style="flex:1;">Kylie (you)</span><span>+38</span></div>
+          <div class="lead-row"><span class="n">3</span><span style="flex:1;">Sarah</span><span>+33</span></div>
+        </div>
+        <div class="tabbar">
+          <div class="tab">⌂<span>Home</span></div>
+          <div class="tab">✎<span>Your picks</span></div>
+          <div class="tab active">◷<span>This week</span></div>
+          <div class="tab">⌤<span>Standings</span></div>
+        </div>
+      </div>
+      <figcaption>This week<small>the Truth — same shape, every league</small></figcaption>
+    </figure>
+
+    <!-- STANDINGS -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="topbar">
+            <div class="switcher">Office Pool <span class="chev">⌄</span></div>
+            <div class="topbar-icons">
+              <div class="icon-btn" title="League settings">⚙</div>
+              <div class="icon-btn avatar">K</div>
+            </div>
+          </div>
+          <h1 class="marquee">Standings</h1>
+          <p class="sub">Through week 6</p>
+
+          <div class="stand-row you"><span class="pos">1</span><div class="who">Kylie (you)<span>312 pts</span></div><span class="pts">312<span class="change up">▲</span></span></div>
+          <div class="stand-row"><span class="pos">2</span><div class="who">Marcus Webb<span>298 pts</span></div><span class="pts">298<span class="change down">▼</span></span></div>
+          <div class="stand-row"><span class="pos">3</span><div class="who">Sarah Lin<span>281 pts</span></div><span class="pts">281<span class="change up">▲</span></span></div>
+          <div class="stand-row"><span class="pos">4</span><div class="who">Dana Kim<span>266 pts</span></div><span class="pts">266</span></div>
+          <div class="stand-row"><span class="pos">5</span><div class="who">Priya Nandan<span>251 pts</span></div><span class="pts">251<span class="change up">▲</span></span></div>
+          <div class="stand-row"><span class="pos">6</span><div class="who">Theo Brandt<span>233 pts</span></div><span class="pts">233<span class="change down">▼</span></span></div>
+          <div class="stand-row"><span class="pos">7</span><div class="who">Kofi Adeyemi<span>219 pts</span></div><span class="pts">219</span></div>
+        </div>
+        <div class="tabbar">
+          <div class="tab">⌂<span>Home</span></div>
+          <div class="tab">✎<span>Your picks</span></div>
+          <div class="tab">◷<span>This week</span></div>
+          <div class="tab active">⌤<span>Standings</span></div>
+        </div>
+      </div>
+      <figcaption>Standings<small>league leaderboard</small></figcaption>
+    </figure>
+
+  </div>
+</div>
+
+<div class="group">
+  <div class="group-head"><h2>Switching leagues</h2><span>opened from the switcher chip on Home — only relevant once someone has more than one</span></div>
+  <div class="phones">
+
+    <!-- SWITCHER SHEET -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="topbar">
+            <div class="switcher">Office Pool <span class="chev">⌄</span></div>
+            <div class="topbar-icons">
+              <div class="icon-btn" title="League settings">⚙</div>
+              <div class="icon-btn avatar">K</div>
+            </div>
+          </div>
+          <h1 class="marquee">Week 6</h1>
+          <div class="marquee-rule"></div>
+          <div class="rankrow">
+            <div class="paddle">1st</div>
+            <div class="rankmeta"><b>312 pts</b>of 14 players</div>
+          </div>
+        </div>
+
+        <div class="sheet-backdrop"></div>
+        <div class="sheet">
+          <div class="sheet-head">
+            <h3>Your leagues</h3>
+            <div class="sheet-close">✕</div>
+          </div>
+          <div class="sheet-row current">
+            <div><h4>Office Pool</h4><div class="meta">Rank 1 of 14, currently viewing</div></div>
+            <span>✓</span>
+          </div>
+          <div class="sheet-row">
+            <div><h4>Girls Night In</h4><div class="meta">Rank 3 of 10</div></div>
+            <span class="badge badge-due">Picks due</span>
+          </div>
+          <div class="sheet-row">
+            <div><h4>Family Feud</h4><div class="meta">Rank 6 of 8</div></div>
+            <span class="badge badge-none">All caught up</span>
+          </div>
+          <div class="sheet-cta">+ Join or create a league</div>
+        </div>
+      </div>
+      <figcaption>League switcher<small>replaces the old Today tab, contextual not permanent</small></figcaption>
+    </figure>
+
+  </div>
+</div>
+
+<div class="group">
+  <div class="group-head"><h2>Settings</h2><span>account, league and admin each scoped to a different thing</span></div>
+  <div class="phones">
+
+    <!-- ACCOUNT SETTINGS -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="backnav">‹ Close</div>
+          <h1 class="marquee">Settings</h1>
+          <p class="sub">Account-wide, applies to every league</p>
+
+          <div class="settingsrow"><span>Profile</span><span class="chev">›</span></div>
+          <div class="settingsrow"><span>Notifications</span><span class="chev">›</span></div>
+          <div class="settingsrow"><span>Appearance</span><span class="chev">›</span></div>
+          <div class="settingsrow"><span>Account &amp; data</span><span class="chev">›</span></div>
+          <div class="settingsrow">
+            <span style="display:flex;align-items:center;gap:8px;">Admin <span class="badge badge-due">Super admin</span></span>
+            <span class="chev">›</span>
+          </div>
+
+          <p class="settings-caption">The Admin row only appears for accounts with super-admin access. Everyone else's list ends at Account &amp; data.</p>
+        </div>
+      </div>
+      <figcaption>Account settings<small>true about you, not any one league</small></figcaption>
+    </figure>
+
+    <!-- LEAGUE SETTINGS -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="backnav">‹ Office Pool</div>
+          <h1 class="marquee">League settings</h1>
+          <p class="sub">Office Pool</p>
+
+          <div class="section-label">Members</div>
+          <div class="member-row"><span>Kylie (you)</span><span style="color:var(--mauve);">Commissioner</span></div>
+          <div class="member-row"><span>Marcus Webb</span></div>
+          <div class="member-row"><span>Sarah Lin</span></div>
+          <p class="more-line">See all 14 members</p>
+
+          <div class="section-label">Join code</div>
+          <div class="code-card">
+            <p style="font-size:11px;color:var(--mauve);margin:0;">This is the only place the code lives</p>
+            <p class="code">OFC-7429</p>
+            <span class="copy">Copy code</span>
+          </div>
+
+          <div class="section-label">Scoring rules</div>
+          <div class="rule-row"><span>🪩 Couple stays safe</span><b>+5</b></div>
+          <div class="rule-row"><span>🪩 Couple in bottom two</span><b>−3</b></div>
+          <div class="rule-row"><span>🔮 Correct safe pick</span><b>+2 each</b></div>
+          <div class="rule-row"><span>🔮 Correct elimination call</span><b>+10</b></div>
+          <div class="rule-row"><span>🏆 Exact finishing position</span><b>+5 each</b></div>
+
+          <div class="section-label">Commissioner controls</div>
+          <div class="settingsrow"><span>Regenerate join code</span><span class="chev">›</span></div>
+          <div class="settingsrow"><span>Edit scoring rules</span><span class="chev">›</span></div>
+          <div class="settingsrow"><span>Remove a member</span><span class="chev">›</span></div>
+          <p class="settings-caption">Commissioner controls are only visible to Office Pool's commissioner. Other members see everything above this section.</p>
+        </div>
+      </div>
+      <figcaption>League settings<small>scoped to one league, code lives only here</small></figcaption>
+    </figure>
+
+    <!-- ADMIN RESULTS ENTRY -->
+    <figure>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>••• 5G 87%</span></div>
+        <div class="screen">
+          <div class="backnav">‹ Settings</div>
+          <h1 class="marquee">Enter results</h1>
+          <p class="sub">Season 34, week 6 — applies to every league at once</p>
+
+          <div class="card">
+            <div class="names" style="margin-bottom:8px;">Jordan Ellis &amp; Marco Diaz</div>
+            <div class="pick3">
+              <div class="opt sel">Safe</div>
+              <div class="opt">Bottom two</div>
+              <div class="opt">Eliminated</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="names" style="margin-bottom:8px;">Priya Nandan &amp; Theo Brandt</div>
+            <div class="pick3">
+              <div class="opt">Safe</div>
+              <div class="opt sel bottom-sel">Bottom two</div>
+              <div class="opt">Eliminated</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="names" style="margin-bottom:8px;">Wes Calloway &amp; Ines Farro</div>
+            <div class="pick3">
+              <div class="opt">Safe</div>
+              <div class="opt">Bottom two</div>
+              <div class="opt sel out-sel">Eliminated</div>
+            </div>
+          </div>
+
+          <div class="btn-gold-full">Publish results</div>
+          <p class="settings-caption" style="text-align:center;">Publishing updates This Week and Standings across every league instantly — this isn't a commissioner tool, it's the one source of truth judges' scores feed into.</p>
+        </div>
+      </div>
+      <figcaption>Admin results entry<small>super-admin only, not league-scoped</small></figcaption>
+    </figure>
+
+  </div>
+</div>
+
+</body>
+</html>
