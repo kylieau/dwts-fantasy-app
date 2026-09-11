@@ -340,7 +340,7 @@ export default async function LeaguePage({
             nextDeadline={nextDeadline}
           />
         }
-        pickEm={
+        yourPicks={
           <div className="flex flex-col gap-6">
             {curtainCallOn && (
               <PickEmBox
@@ -354,6 +354,17 @@ export default async function LeaguePage({
                 revealedPredictions={revealedPredictions}
               />
             )}
+            {danceCardOn &&
+              (rosterCouples.length > 0 ? (
+                <RosterCard couples={rosterCouples} totalPoints={pointsByManager.get(user.id) ?? 0} />
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Your Roster</CardTitle>
+                    <CardDescription>No roster yet — check the draft room.</CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
             {grandFinaleOn && (
               <GrandFinaleBox
                 leagueId={id}
@@ -364,38 +375,20 @@ export default async function LeaguePage({
                 isLocked={grandFinaleLocked}
               />
             )}
-            {!curtainCallOn && !grandFinaleOn && (
+            {!curtainCallOn && !danceCardOn && !grandFinaleOn && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Pick &apos;Em</CardTitle>
-                  <CardDescription>Neither Curtain Call nor Grand Finale is on for this league.</CardDescription>
+                  <CardTitle>No scoring modules are on</CardTitle>
+                  <CardDescription>
+                    This league hasn&apos;t turned on Dance Card, Curtain Call, or Grand Finale yet — there&apos;s
+                    nothing to pick. Ask your commissioner to enable one in League Settings.
+                  </CardDescription>
                 </CardHeader>
               </Card>
             )}
           </div>
         }
-        roster={
-          danceCardOn ? (
-            rosterCouples.length > 0 ? (
-              <RosterCard couples={rosterCouples} totalPoints={pointsByManager.get(user.id) ?? 0} />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Your Roster</CardTitle>
-                  <CardDescription>No roster yet — check the draft room.</CardDescription>
-                </CardHeader>
-              </Card>
-            )
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Roster</CardTitle>
-                <CardDescription>Dance Card isn&apos;t enabled for this league.</CardDescription>
-              </CardHeader>
-            </Card>
-          )
-        }
-        results={
+        thisWeek={
           <WeeklyResultsView
             episodes={completedEpisodes ?? []}
             episodeResults={episodeResults ?? []}

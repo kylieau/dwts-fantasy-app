@@ -3,27 +3,24 @@
 import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { HomeIcon, TicketIcon, UsersIcon, ListChecksIcon, TrophyIcon } from "lucide-react";
+import { HomeIcon, PencilLineIcon, ListChecksIcon, TrophyIcon } from "lucide-react";
 
 const TABS = [
   { value: "home", label: "Home", icon: HomeIcon },
-  { value: "pickem", label: "Pick 'Em", icon: TicketIcon },
-  { value: "roster", label: "Roster", icon: UsersIcon },
-  { value: "results", label: "Results", icon: ListChecksIcon },
+  { value: "yourpicks", label: "Your picks", icon: PencilLineIcon },
+  { value: "thisweek", label: "This week", icon: ListChecksIcon },
   { value: "standings", label: "Standings", icon: TrophyIcon },
 ] as const;
 
 export function LeagueTabs({
   home,
-  pickEm,
-  roster,
-  results,
+  yourPicks,
+  thisWeek,
   standings,
 }: {
   home: ReactNode;
-  pickEm: ReactNode;
-  roster: ReactNode;
-  results: ReactNode;
+  yourPicks: ReactNode;
+  thisWeek: ReactNode;
   standings: ReactNode;
 }) {
   const router = useRouter();
@@ -63,9 +60,8 @@ export function LeagueTabs({
 
       <div className="pb-20 sm:pb-0">
         <TabsContent value="home">{home}</TabsContent>
-        <TabsContent value="pickem">{pickEm}</TabsContent>
-        <TabsContent value="roster">{roster}</TabsContent>
-        <TabsContent value="results">{results}</TabsContent>
+        <TabsContent value="yourpicks">{yourPicks}</TabsContent>
+        <TabsContent value="thisweek">{thisWeek}</TabsContent>
         <TabsContent value="standings">{standings}</TabsContent>
       </div>
     </Tabs>
