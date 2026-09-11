@@ -622,6 +622,37 @@ begin
 end;
 $$;
 
+-- Commissioner-initiated counterpart to leave_league — same deliberate
+-- non-cascade (roster_slots/predictions/weekly_manager_scores stay intact
+-- for league history), just triggered on someone else's behalf. The
+-- `role != 'commissioner'` guard means this can never remove a commissioner
+-- (there's exactly one per league, and no ownership-transfer flow exists).
+create function public.remove_league_member(p_league_id uuid, p_user_id uuid)
+returns void
+language plpgsql
+security definer set search_path = ''
+as $$
+begin
+  if not exists (
+    select 1 from public.leagues
+    where id = p_league_id and commissioner_id = auth.uid()
+  ) then
+    raise exception 'Only the commissioner can remove a member';
+  end if;
+
+  if p_user_id = auth.uid() then
+    raise exception 'Use Leave League to remove yourself';
+  end if;
+
+  delete from public.league_members
+  where league_id = p_league_id and user_id = p_user_id and role != 'commissioner';
+
+  if not found then
+    raise exception 'That person is not a removable member of this league';
+  end if;
+end;
+$$;
+
 -- Separate from update_league_settings (waiver/draft-timer config) since
 -- renaming applies regardless of which modules are on, so the form that
 -- edits it shouldn't be entangled with the Dance-Card-conditional section
@@ -675,11 +706,13 @@ $$;
 revoke execute on function public.create_league(text, boolean, boolean, boolean) from public;
 revoke execute on function public.join_league(text) from public;
 revoke execute on function public.leave_league(uuid) from public;
+revoke execute on function public.remove_league_member(uuid, uuid) from public;
 revoke execute on function public.rename_league(uuid, text) from public;
 revoke execute on function public.delete_league(uuid) from public;
 grant execute on function public.create_league(text, boolean, boolean, boolean) to authenticated;
 grant execute on function public.join_league(text) to authenticated;
 grant execute on function public.leave_league(uuid) to authenticated;
+grant execute on function public.remove_league_member(uuid, uuid) to authenticated;
 grant execute on function public.rename_league(uuid, text) to authenticated;
 grant execute on function public.delete_league(uuid) to authenticated;
 

@@ -16,6 +16,7 @@ import {
 import { LeagueModulesForm } from "@/components/league-modules-form";
 import { LeagueInfoSection } from "@/components/league-info-section";
 import { LeagueSwitcher, type SwitcherLeague } from "@/components/league-switcher";
+import { LeagueMembersSection } from "@/components/league-members-section";
 
 export function LeagueHeader({
   leagueId,
@@ -30,6 +31,7 @@ export function LeagueHeader({
   justCreated,
   scoringConfigured,
   switcherLeagues,
+  members,
 }: ComponentProps<typeof LeagueModulesForm> & {
   leagueName: string;
   inviteCode: string;
@@ -38,6 +40,7 @@ export function LeagueHeader({
   justCreated: boolean;
   scoringConfigured: boolean;
   switcherLeagues: SwitcherLeague[];
+  members: { userId: string; displayName: string; role: string }[];
 }) {
   return (
     <Sheet>
@@ -103,6 +106,7 @@ export function LeagueHeader({
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-6 px-4 pb-4">
+          <LeagueMembersSection leagueId={leagueId} members={members} canEdit={canEdit} />
           <LeagueInfoSection
             leagueId={leagueId}
             leagueName={leagueName}

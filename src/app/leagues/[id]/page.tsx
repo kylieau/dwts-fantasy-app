@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -411,6 +410,11 @@ export default async function LeaguePage({
         justCreated={justCreated === "1"}
         scoringConfigured={scoringSettings?.scoring_configured ?? true}
         switcherLeagues={switcherLeagues}
+        members={(members ?? []).map((m) => ({
+          userId: m.user_id,
+          displayName: m.profiles?.display_name ?? "Unknown",
+          role: m.role,
+        }))}
       />
 
       <LeagueTabs
@@ -491,25 +495,7 @@ export default async function LeaguePage({
             grandFinaleOn={grandFinaleOn}
           />
         }
-        standings={
-          <div className="flex flex-col gap-6">
-            <StandingsTable standings={standings} currentUserId={user.id} />
-            <Card>
-              <CardHeader>
-                <CardTitle>Members</CardTitle>
-                <CardDescription>{members?.length ?? 0} joined</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                {members?.map((m, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <span>{m.profiles?.display_name}</span>
-                    <span className="capitalize text-muted-foreground">{m.role}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        }
+        standings={<StandingsTable standings={standings} currentUserId={user.id} />}
       />
     </div>
   );

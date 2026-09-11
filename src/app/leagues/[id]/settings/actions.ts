@@ -28,6 +28,22 @@ export async function deleteLeague(leagueId: string): Promise<{ error: string | 
   redirect("/leagues");
 }
 
+export async function removeMember(
+  leagueId: string,
+  userId: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("remove_league_member", {
+    p_league_id: leagueId,
+    p_user_id: userId,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath(`/leagues/${leagueId}`);
+  return { error: null };
+}
+
 export type LeagueSettingsInput = {
   waiverMode: "locked" | "waivers";
   waiverClaimMethod: "reverse_standings" | "fcfs" | "manual";

@@ -887,7 +887,12 @@ export type Database = {
       }
       cancel_account_deletion: { Args: never; Returns: undefined }
       create_league: {
-        Args: { p_name: string }
+        Args: {
+          p_curtain_call_enabled?: boolean
+          p_dance_card_enabled?: boolean
+          p_grand_finale_enabled?: boolean
+          p_name: string
+        }
         Returns: {
           commissioner_id: string
           created_at: string
@@ -1008,6 +1013,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      remove_league_member: {
+        Args: { p_league_id: string; p_user_id: string }
+        Returns: undefined
       }
       rename_league: {
         Args: { p_league_id: string; p_name: string }
