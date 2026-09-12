@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { StandingsTable } from "@/components/standings-table";
+import { StandingsModuleBreakdown } from "@/components/standings-module-breakdown";
 import { RosterCard } from "@/components/roster-card";
 import { PickEmBox } from "@/components/pick-em-box";
 import { GrandFinaleBox } from "@/components/grand-finale-box";
@@ -154,6 +155,64 @@ export default async function LeaguePage({
     displayName: m.profiles?.display_name ?? "Unknown",
     totalPoints: pointsByManager.get(m.user_id) ?? 0,
   }));
+
+  // Rank-change arrows compare current standings to what they'd have been
+  // without the most recently completed episode's scores — no historical
+  // snapshot table needed, since weekly_manager_scores already carries points
+  // per episode.
+  const latestCompletedEpisodeId = completedEpisodes?.[0]?.id ?? null;
+  const latestCompletedWeek = completedEpisodes?.[0]?.week_number ?? null;
+
+  const previousPointsByManager = new Map<string, number>();
+  if (latestCompletedEpisodeId) {
+    for (const row of allScores ?? []) {
+      if (row.episode_id === latestCompletedEpisodeId) continue;
+      previousPointsByManager.set(
+        row.manager_id,
+        (previousPointsByManager.get(row.manager_id) ?? 0) + row.total_points
+      );
+    }
+  }
+
+  function ranksFromPoints(pointsMap: Map<string, number>): Map<string, number> {
+    const ranked = (members ?? [])
+      .map((m) => ({ managerId: m.user_id, points: pointsMap.get(m.user_id) ?? 0 }))
+      .sort((a, b) => b.points - a.points);
+    return new Map(ranked.map((r, i) => [r.managerId, i + 1]));
+  }
+
+  const currentRanks = ranksFromPoints(pointsByManager);
+  const previousRanks = latestCompletedEpisodeId ? ranksFromPoints(previousPointsByManager) : null;
+
+  const standingsWithChange = standings.map((s) => {
+    if (!previousRanks) return { ...s, change: null as "up" | "down" | null };
+    const curr = currentRanks.get(s.managerId)!;
+    const prev = previousRanks.get(s.managerId)!;
+    const change: "up" | "down" | null = curr < prev ? "up" : curr > prev ? "down" : null;
+    return { ...s, change };
+  });
+
+  const moduleBreakdownMembers = [...standingsWithChange]
+    .sort((a, b) => b.totalPoints - a.totalPoints)
+    .map((s) => ({
+      managerId: s.managerId,
+      displayName: s.displayName,
+      danceCard: danceCardOn
+        ? Math.round(
+            (rosterPointsByManager.get(s.managerId) ?? 0) * (scoringSettings?.judges_score_category_weight ?? 1)
+          )
+        : null,
+      curtainCall: curtainCallOn
+        ? Math.round(
+            (predictionPointsByManager.get(s.managerId) ?? 0) * (scoringSettings?.eliminations_category_weight ?? 1)
+          )
+        : null,
+      grandFinale: grandFinaleOn
+        ? Math.round(
+            (grandFinalePointsByManager.get(s.managerId) ?? 0) * (scoringSettings?.bonus_picks_category_weight ?? 1)
+          )
+        : null,
+    }));
 
   const nameByManager = Object.fromEntries(
     (members ?? []).map((m) => [m.user_id, m.profiles?.display_name ?? "Unknown"])
@@ -495,7 +554,21 @@ export default async function LeaguePage({
             grandFinaleOn={grandFinaleOn}
           />
         }
-        standings={<StandingsTable standings={standings} currentUserId={user.id} />}
+        standings={
+          <div>
+            <StandingsTable
+              standings={standingsWithChange}
+              currentUserId={user.id}
+              latestCompletedWeek={latestCompletedWeek}
+            />
+            <StandingsModuleBreakdown
+              members={moduleBreakdownMembers}
+              danceCardOn={danceCardOn}
+              curtainCallOn={curtainCallOn}
+              grandFinaleOn={grandFinaleOn}
+            />
+          </div>
+        }
       />
     </div>
   );
